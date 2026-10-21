@@ -1,0 +1,13 @@
+@model EnrollVm
+@{ Layout = "_KioskLayout"; ViewData["Title"] = "Set up kiosk"; }
+<div class="k-wrap"><div class="k-card k-narrow">
+  <div class="k-logo"><partial name="_BrandMark" /></div>
+  <h1>Set up this device as a kiosk?</h1>
+  <p class="k-sub">This browser will become a visitor check-in kiosk.</p>
+  <form method="post">
+    <input type="hidden" name="Token" value="@Model.Token" />
+    <label class="k-label">Device name</label>
+    <input name="DeviceName" value="@Model.DeviceName" class="k-input" />
+    <button class="k-btn k-primary k-block">Yes, set up kiosk</button>
+  </form>
+</div></div>

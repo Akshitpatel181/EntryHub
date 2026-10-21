@@ -1,0 +1,41 @@
+@model List<Question>
+@{ ViewData["Title"] = "Questions"; }
+<div class="page-head">
+  <div><h1>Check-in questions</h1><p>What visitors are asked on the kiosk. Drag the handle to change the order.</p></div>
+  <div class="page-actions"><a class="btn btn-primary" asp-action="Create">@Html.Icon("plus-lg") Add question</a></div>
+</div>
+<div class="table-wrap"><div class="table-responsive"><table class="table align-middle">
+<thead><tr><th style="width:44px"></th><th>Question</th><th>Answer type</th><th>Shown to</th><th>Required</th><th>Status</th><th></th></tr></thead>
+<tbody id="rows">
+@foreach (var q in Model)
+{
+  <tr data-id="@q.Id" class="@(q.IsActive ? "" : "is-off")">
+    <td><span class="handle kbd-handle" title="Drag to reorder">@Html.Icon("grip-vertical")</span></td>
+    <td class="t-name">@q.Text</td>
+    <td><span class="chip">@q.Type</span></td>
+    <td>@(q.VisitorType == "All" ? "Everyone" : q.VisitorType)</td>
+    <td>@if (q.IsRequired) { <span class="pill info">Required</span> } else { <span class="text-muted">Optional</span> }</td>
+    <td>@if (q.IsActive) { <span class="pill ok">Shown</span> } else { <span class="pill quiet">Hidden</span> }</td>
+    <td>
+      <div class="row-actions">
+        <form asp-action="Toggle" asp-route-id="@q.Id" method="post"><button class="btn btn-sm btn-outline-secondary">@(q.IsActive ? "Hide" : "Show")</button></form>
+        <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@q.Id">@Html.Icon("pencil") Edit</a>
+        <form asp-action="Delete" asp-route-id="@q.Id" method="post" onsubmit="return confirm('Delete this question?')"><button class="btn btn-sm btn-outline-danger" aria-label="Delete question">@Html.Icon("trash3")</button></form>
+      </div>
+    </td>
+  </tr>
+}
+@if (!Model.Any()) { <tr><td colspan="7" class="empty">@Html.Icon("patch-question")<b>No questions yet</b>Add one to collect extra details at check-in.</td></tr> }
+</tbody></table></div></div>
+@section Scripts {
+  <script src="~/lib/sortablejs/Sortable.min.js"></script>
+  <script>
+    Sortable.create(document.getElementById('rows'), {
+      handle: '.handle', animation: 150, ghostClass: 'sortable-ghost',
+      onEnd: function () {
+        var ids = Array.from(document.querySelectorAll('#rows tr[data-id]')).map(function (r) { return parseInt(r.dataset.id); });
+        postJson('/Questions/UpdateOrder', ids);
+      }
+    });
+  </script>
+}

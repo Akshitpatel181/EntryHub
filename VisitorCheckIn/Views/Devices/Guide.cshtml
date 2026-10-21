@@ -1,0 +1,23 @@
+@{ ViewData["Title"] = "Kiosk lock-down guide"; }
+<div class="page-head"><div><h1>Locking a device into kiosk mode</h1><p>Pairing tells the server which browsers may be kiosks. The steps below lock the device itself so visitors can't leave the page.</p></div>
+  <div class="page-actions"><a class="btn btn-link" asp-action="Index">&larr; Back to devices</a></div></div>
+<div class="accordion" id="g">
+@{
+  var items = new (string t, string html)[] {
+   ("iPad / iPhone (Safari)", "<ol><li>Open the pairing link or <code>/Kiosk/Pair</code> in <b>Safari</b> and pair.</li><li>Share → <b>Add to Home Screen</b>. This gives full-screen, no browser bars.</li><li>Open the Home Screen app.</li><li>Settings → Accessibility → <b>Guided Access</b> → On, set a passcode.</li><li>Inside the app triple-click the side/Home button → <b>Start</b>. Visitors can't exit without the passcode.</li><li>Settings → Display &amp; Brightness → Auto-Lock → Never. (Managed fleets: use MDM Single App Mode.)</li></ol>"),
+   ("Android phone / tablet (Chrome)", "<ol><li>Pair in Chrome, then menu → <b>Add to Home screen / Install app</b>.</li><li>Open the installed app, then Recents → app icon → <b>Pin</b> (Screen pinning: Settings → Security → Pin windows).</li><li>Settings → Display → Screen timeout → longest, or enable Stay awake in Developer options while charging.</li><li><b>Stronger option:</b> install <i>Fully Kiosk Browser</i>, set the Start URL to the enrolment link (Method E) or <code>/Kiosk</code> after pairing, enable Kiosk Mode and Keep Screen On.</li></ol>"),
+   ("Windows laptop / PC", "<ol><li>Pair in Edge or Chrome.</li><li>Edge: <code>msedge --kiosk https://your-site/Kiosk --edge-kiosk-type=fullscreen</code>. Chrome: <code>chrome --kiosk https://your-site/Kiosk</code>.</li><li>Put that shortcut in <code>shell:startup</code> so it launches at boot.</li><li><b>Stronger:</b> Settings → Accounts → Other users → <b>Set up a kiosk</b> (Assigned Access) and pick Edge with the URL.</li></ol>"),
+   ("macOS laptop", "<ol><li>Pair in Chrome or Edge.</li><li>Run: <code>open -a 'Google Chrome' --args --kiosk https://your-site/Kiosk</code></li><li>Create a standard user for the kiosk, enable auto-login, and add the command as a Login Item (Automator app).</li><li>Exit kiosk with ⌘+Q.</li></ol>"),
+   ("Chromebook", "<ol><li>Admin console → Devices → Chrome → Apps &amp; extensions → <b>Kiosk</b>, add a Web kiosk app with your <code>/Kiosk</code> URL (use the Method E bulk link as the URL for first enrolment).</li><li>Or personal device: open the page and press F4 / use Fullscreen, then Pin to shelf.</li></ol>"),
+   ("Raspberry Pi / Linux", "<ol><li>Pair once in Chromium.</li><li>Autostart: <code>chromium-browser --kiosk --noerrdialogs --disable-infobars --incognito=false https://your-site/Kiosk</code></li><li>Disable screen blanking (<code>xset s off -dpms</code>).</li></ol>"),
+   ("Your personal phone / laptop (temporary kiosk)", "<ol><li>Use Method D (<b>Use THIS device now</b>) or scan the QR.</li><li>Revoke it later in <b>Kiosk devices → Revoke</b>. The device returns to the pairing screen instantly.</li><li>Tip: pair in a separate browser profile or Incognito-free private profile so your normal browsing is untouched. Don't use Incognito, since cookies are wiped when it closes.</li></ol>")
+  };
+  for (int i = 0; i < items.Length; i++)
+  {
+    <div class="accordion-item">
+      <h2 class="accordion-header"><button class="accordion-button @(i == 0 ? "" : "collapsed")" data-bs-toggle="collapse" data-bs-target="#c@(i)">@items[i].t</button></h2>
+      <div id="c@(i)" class="accordion-collapse collapse @(i == 0 ? "show" : "")" data-bs-parent="#g"><div class="accordion-body">@Html.Raw(items[i].html)</div></div>
+    </div>
+  }
+}
+</div>

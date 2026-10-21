@@ -1,0 +1,47 @@
+@model VisitHost
+@{ ViewData["Title"] = "My notifications"; var visits = (List<Visit>)ViewBag.Visits; }
+<div class="page-head"><div><h1>Hi @Model.Name</h1><p>Get an alert on every phone and laptop you use. When a visitor picks you at the kiosk, all enabled devices ring at once.</p></div></div>
+
+<div class="card mb-4"><div class="card-body">
+  <div class="method-head"><span class="method-ico">@Html.Icon("bell")</span><h3>Alerts on this device</h3></div>
+  <p class="text-muted mb-3">Click once on <b>every</b> phone or laptop you want notified. Each alert shows the visitor's photo.</p>
+  @if (!Context.Request.IsHttps)
+  {
+    <div class="alert alert-warning mb-3">@Html.Icon("exclamation-triangle")<div>This page is not using <b>https</b>, so phones and browsers will refuse push notifications. Open the site with its https address (for example a Visual Studio Dev Tunnel or your real domain).</div></div>
+  }
+  <div class="alert alert-info mb-3">@Html.Icon("info-circle")<div>iPhone / iPad: tap Share → <b>Add to Home Screen</b>, open the app from the Home Screen, then enable notifications there (iOS 16.4+).</div></div>
+  <div class="d-flex gap-2 flex-wrap align-items-center">
+    <button id="enable" class="btn btn-primary">@Html.Icon("bell") Enable notifications on this device</button>
+    <form asp-action="Test" method="post" class="d-inline"><button class="btn btn-outline-secondary">@Html.Icon("send") Send me a test</button></form>
+  </div>
+  <div id="pushStatus" class="t-sub mt-3"></div>
+</div></div>
+
+<h2 class="section-title">My alert devices <span class="count">@Model.Devices.Count</span></h2>
+<div class="table-wrap mb-5"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Device</th><th>Added</th><th></th></tr></thead><tbody>
+@foreach (var d in Model.Devices)
+{
+  <tr><td class="t-name">@d.Label</td><td><time class="lt" datetime="@d.CreatedUtc.ToIso()"></time></td>
+    <td><div class="row-actions"><form asp-action="RemoveDevice" asp-route-id="@d.Id" method="post"><button class="btn btn-sm btn-outline-danger">Remove</button></form></div></td></tr>
+}
+@if (!Model.Devices.Any()) { <tr><td colspan="3" class="empty">@Html.Icon("bell")<b>No devices yet</b>Enable notifications above to add this one.</td></tr> }
+</tbody></table></div></div>
+
+<h2 class="section-title">Recent visitors for me <span class="count">@visits.Count</span></h2>
+<div class="table-wrap"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Visitor</th><th>Arrived</th><th>Status</th></tr></thead><tbody>
+@foreach (var v in visits)
+{
+  <tr>
+    <td><div class="person"><partial name="_VisitorAvatar" model="v" /><div><div class="t-name">@v.VisitorName</div><div class="t-sub">@v.VisitorCompany</div></div></div></td>
+    <td><time class="lt" datetime="@v.CheckInUtc.ToIso()"></time></td>
+    <td>@if (v.CheckOutUtc == null) { <span class="pill ok">On site</span> } else { <span class="pill quiet">Left</span> }</td>
+  </tr>
+}
+@if (!visits.Any()) { <tr><td colspan="3" class="empty">@Html.Icon("person-walking")<b>No visitors yet today</b></td></tr> }
+</tbody></table></div></div>
+<div id="toast" class="toast-box" role="status"></div>
+@section Scripts {
+  <script>window.HOSTPORTAL = { vapidPublic: @Json.Serialize((string)ViewBag.VapidPublic) };</script>
+  <script src="~/lib/signalr/signalr.min.js"></script>
+  <script src="~/js/host.js" asp-append-version="true"></script>
+}

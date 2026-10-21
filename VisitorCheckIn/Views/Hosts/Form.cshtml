@@ -1,0 +1,19 @@
+@model HostFormVm
+@{ ViewData["Title"] = Model.Id == 0 ? "Add host" : "Edit host"; }
+<div class="page-head"><div><h1>@ViewData["Title"]</h1><p>Visitors pick hosts from this list on the kiosk.</p></div></div>
+<form method="post" class="card form-card"><div class="card-body">
+  <div asp-validation-summary="All" class="text-danger"></div>
+  <div class="mb-3"><label asp-for="Name" class="form-label">Name</label><input asp-for="Name" class="form-control" /></div>
+  <div class="row g-3 mb-3">
+    <div class="col-md-6"><label asp-for="Email" class="form-label">Email</label><input asp-for="Email" class="form-control" /></div>
+    <div class="col-md-6"><label asp-for="Phone" class="form-label">Phone</label><input asp-for="Phone" class="form-control" /></div>
+  </div>
+  <div class="form-check"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label">Active (shown on the kiosk)</label></div>
+
+  <div class="form-section">
+    <div class="form-check mb-3"><input asp-for="CreateLogin" class="form-check-input" /><label asp-for="CreateLogin" class="form-check-label">Host can sign in to the Host Portal <span class="text-muted">(needed for push alerts on their devices)</span></label></div>
+    <label asp-for="Password" class="form-label">Password @(Model.HasLogin ? "(leave blank to keep current)" : "")</label>
+    <input asp-for="Password" class="form-control" autocomplete="new-password" />
+  </div>
+  <div class="form-actions"><button class="btn btn-primary">Save host</button><a class="btn btn-link" asp-action="Index">Cancel</a></div>
+</div></form>

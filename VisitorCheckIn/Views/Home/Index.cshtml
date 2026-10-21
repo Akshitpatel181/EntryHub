@@ -1,0 +1,11 @@
+@{ Layout = "_AuthLayout"; ViewData["Title"] = "Welcome"; }
+<div class="land">
+  <div class="auth-brand" style="justify-content:flex-start"><partial name="_BrandMark" />Visitor Check-In</div>
+  <h1>Welcome people in. Let the right person know.</h1>
+  <p class="lead">A touch-screen kiosk for your front desk, a log your team can search, and instant alerts on every device your hosts carry.</p>
+  <div class="land-grid">
+    <a class="land-tile primary" asp-controller="Account" asp-action="Login">@Html.Icon("person-badge")<b>Admin / host sign in</b><span>Manage hosts, questions, devices and the visitor log.</span></a>
+    <a class="land-tile" asp-controller="Kiosk" asp-action="Index">@Html.Icon("pc-display")<b>Open kiosk</b><span>The visitor-facing check-in screen.</span></a>
+    <a class="land-tile" asp-controller="Kiosk" asp-action="Pair">@Html.Icon("qr-code")<b>Pair this device</b><span>Turn this tablet or laptop into a kiosk.</span></a>
+  </div>
+</div>

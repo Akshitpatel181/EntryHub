@@ -1,0 +1,42 @@
+@model List<Visit>
+@{ ViewData["Title"] = "Visitor log"; }
+<div class="page-head">
+  <div><h1>Visitor log</h1><p>Every check-in with the answers visitors gave. Filter by date, name or host.</p></div>
+  <div class="page-actions"><a class="btn btn-outline-secondary" asp-action="Export" asp-route-from="@ViewBag.From" asp-route-to="@ViewBag.To" asp-route-q="@ViewBag.Q" asp-route-onsite="@ViewBag.OnSite">@Html.Icon("download") Export CSV</a></div>
+</div>
+<form method="get" class="panel panel-pad mb-4">
+  <div class="row g-3 align-items-end">
+    <div class="col-6 col-md-2"><label class="form-label">From</label><input type="date" name="from" value="@ViewBag.From" class="form-control" /></div>
+    <div class="col-6 col-md-2"><label class="form-label">To</label><input type="date" name="to" value="@ViewBag.To" class="form-control" /></div>
+    <div class="col-12 col-md-4"><label class="form-label">Search</label><input name="q" value="@ViewBag.Q" class="form-control" placeholder="Name, company or host" /></div>
+    <div class="col-6 col-md-2"><div class="form-check mb-2"><input type="checkbox" id="onsite" name="onsite" value="true" class="form-check-input" @(ViewBag.OnSite == true ? "checked" : "") /><label for="onsite" class="form-check-label">On site only</label></div></div>
+    <div class="col-6 col-md-2"><button class="btn btn-primary w-100">@Html.Icon("search") Filter</button></div>
+  </div>
+</form>
+<div class="table-wrap"><div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th>Visitor</th><th>Type</th><th>Host</th><th>In</th><th>Out</th><th>Kiosk</th><th>Answers</th><th></th></tr></thead><tbody>
+  @foreach (var v in Model)
+  {
+    <tr>
+      <td><div class="person"><partial name="_VisitorAvatar" model="v" /><div><div class="t-name">@v.VisitorName</div><div class="t-sub">@v.VisitorCompany</div></div></div></td>
+      <td><span class="chip">@v.VisitorType</span></td><td>@v.Host?.Name</td>
+      <td><time class="lt" datetime="@v.CheckInUtc.ToIso()"></time></td>
+      <td>@if (v.CheckOutUtc != null) { <time class="lt" datetime="@v.CheckOutUtc.ToIso()"></time> } else { <span class="pill ok">On site</span> }</td>
+      <td>@v.KioskDevice?.Name</td>
+      <td>
+        @if (v.Answers.Count == 0) { <span class="text-muted">-</span> }
+        else
+        {
+          <details class="answers"><summary>@v.Answers.Count answer@(v.Answers.Count == 1 ? "" : "s")</summary>
+            @foreach (var a in v.Answers)
+            {
+              <div class="ans"><div class="q">@a.QuestionText</div>
+              @if (a.Answer != null && a.Answer.StartsWith("data:image/png;base64,")) { <img src="@a.Answer" class="sig" alt="signature" /> } else { <div>@a.Answer</div> }</div>
+            }</details>
+        }
+      </td>
+      <td>@if (v.CheckOutUtc == null) { <div class="row-actions"><form asp-action="CheckOut" asp-route-id="@v.Id" method="post"><button class="btn btn-sm btn-outline-danger">Check out</button></form></div> }</td>
+    </tr>
+  }
+  @if (!Model.Any()) { <tr><td colspan="8" class="empty">@Html.Icon("journal-text")<b>No visits found</b>Try a wider date range or clear the search.</td></tr> }
+</tbody></table></div></div>

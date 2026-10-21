@@ -1,0 +1,85 @@
+@{
+  var ctrl = (ViewContext.RouteData.Values["controller"] as string) ?? "";
+  string Active(string c) => string.Equals(ctrl, c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+  var userName = User.Identity?.Name ?? "";
+  var isAdmin = User.IsInRole("Admin");
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@ViewData["Title"] · Visitor Check-In</title>
+  <link rel="manifest" href="/host.webmanifest" />
+  <meta name="theme-color" content="#10252e" />
+  <link rel="icon" type="image/png" href="~/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="~/icons/icon-192.png" />
+  <link href="~/lib/bootstrap/bootstrap.min.css" rel="stylesheet" />
+  <link href="~/css/site.css" rel="stylesheet" asp-append-version="true" />
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <a class="brand" asp-controller="Home" asp-action="Index"><partial name="_BrandMark" />Visitor Check-In</a>
+    <nav>
+      @if (isAdmin)
+      {
+        <div class="nav-group">Front desk</div>
+        <a class="nav-link-x @Active("Dashboard")" asp-controller="Dashboard" asp-action="Index">@Html.Icon("speedometer2") Dashboard</a>
+        <a class="nav-link-x @Active("Visits")" asp-controller="Visits" asp-action="Index">@Html.Icon("journal-text") Visitor log</a>
+        <div class="nav-group">Set up</div>
+        <a class="nav-link-x @Active("Hosts")" asp-controller="Hosts" asp-action="Index">@Html.Icon("people") Hosts</a>
+        <a class="nav-link-x @Active("Questions")" asp-controller="Questions" asp-action="Index">@Html.Icon("patch-question") Questions</a>
+        <a class="nav-link-x @Active("Devices")" asp-controller="Devices" asp-action="Index">@Html.Icon("tablet") Kiosk devices</a>
+      }
+      @if (User.IsInRole("Host"))
+      {
+        <div class="nav-group">My account</div>
+        <a class="nav-link-x @Active("HostPortal")" asp-controller="HostPortal" asp-action="Index">@Html.Icon("bell") My notifications</a>
+      }
+      @if (User.Identity?.IsAuthenticated == true)
+      {
+        <div class="nav-group">Kiosk</div>
+        <a class="nav-link-x" asp-controller="Kiosk" asp-action="Index" target="_blank" rel="noopener">@Html.Icon("pc-display") Open kiosk screen</a>
+      }
+    </nav>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+      <div class="sidebar-foot">
+        <div class="user-chip">
+          <span class="avatar">@userName.Initials()</span>
+          <span class="who"><b>@userName</b><span>@(isAdmin ? "Administrator" : "Host")</span></span>
+        </div>
+        <form asp-controller="Account" asp-action="Logout" method="post">
+          <button class="signout">@Html.Icon("box-arrow-right") Sign out</button>
+        </form>
+      </div>
+    }
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <div class="main-col">
+    <header class="topbar">
+      <a class="brand" asp-controller="Home" asp-action="Index"><partial name="_BrandMark" />Visitor Check-In</a>
+      <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-controls="sidebar">@Html.Icon("list")</button>
+    </header>
+    <main class="content">
+      @if (TempData["Ok"] != null) { <div class="alert alert-success mb-4" role="status">@Html.Icon("check2-circle")<div>@TempData["Ok"]</div></div> }
+      @if (TempData["Error"] != null) { <div class="alert alert-danger mb-4" role="alert">@Html.Icon("exclamation-triangle")<div>@TempData["Error"]</div></div> }
+      @RenderBody()
+    </main>
+  </div>
+</div>
+@Html.AntiForgeryToken()
+<script src="~/lib/bootstrap/bootstrap.bundle.min.js"></script>
+<script src="~/js/common.js" asp-append-version="true"></script>
+<script>
+  (function () {
+    var b = document.body, btn = document.getElementById('menuBtn'), sc = document.getElementById('scrim');
+    if (btn) btn.addEventListener('click', function () { b.classList.toggle('nav-open'); });
+    if (sc) sc.addEventListener('click', function () { b.classList.remove('nav-open'); });
+  })();
+</script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

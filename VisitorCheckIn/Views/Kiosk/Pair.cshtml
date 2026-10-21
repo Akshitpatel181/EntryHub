@@ -1,0 +1,12 @@
+@{ Layout = "_KioskLayout"; ViewData["Title"] = "Pair this device"; }
+<div class="k-wrap"><div class="k-card k-narrow">
+  <div class="k-logo"><partial name="_BrandMark" /></div>
+  <h1>Pair this device</h1>
+  <p class="k-sub">Ask an admin for a 6-digit code. In the admin portal: Kiosk devices → Add device.</p>
+  <div class="k-error">@Html.ValidationSummary(true)</div>
+  <form method="post">
+    <input name="code" class="k-input k-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" autofocus placeholder="000000" aria-label="6-digit pairing code" />
+    <button class="k-btn k-primary k-block">Pair device</button>
+  </form>
+  <p class="k-hint">Already have a QR code or setup link? Scan or open it on this device instead.</p>
+</div></div>

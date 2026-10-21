@@ -1,0 +1,31 @@
+@model EnrollmentResultVm
+@{ ViewData["Title"] = "Enrol device"; }
+<div class="page-head"><div><h1>Set up “@Model.DeviceName”</h1>
+  <p>Valid until <time class="lt" datetime="@Model.ExpiresUtc.ToIso()"></time>
+  @(Model.MaxUses > 1 ? $"· up to {Model.MaxUses} devices" : "· one device"). This page is the only time the link is shown.</p></div></div>
+@if (Model.IsLocalhost)
+{
+  <div class="alert alert-warning mb-4">@Html.Icon("exclamation-triangle")<div>This link points to <b>localhost</b>, so other devices can't open it. Browse the admin portal using your PC's LAN IP (for example <code>https://192.168.1.20:7080</code>), or set <code>App:PublicBaseUrl</code> in appsettings.json to your public URL.</div></div>
+}
+<div class="steps">
+  <div class="card"><div class="card-body text-center">
+    <div class="section-title justify-content-center">@Html.Icon("qr-code") Scan the QR</div>
+    <div class="qr-frame"><img src="data:image/png;base64,@Model.QrBase64" alt="QR code to set up this kiosk" style="width:100%;max-width:240px;display:block" /></div>
+    <div class="t-sub mt-3">Point the device camera at this code.</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="section-title">@Html.Icon("hash") Type the code</div>
+    <div class="code-box">@Model.Code</div>
+    <div class="t-sub mt-3">On the device open<br /><code>@Model.PairUrl</code><br />and enter the code.</div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="section-title">@Html.Icon("link-45deg") Send the link</div>
+    <textarea id="lnk" class="form-control" rows="5" readonly>@Model.Link</textarea>
+    <div class="mt-3 d-flex gap-2 flex-wrap">
+      <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(document.getElementById('lnk').value)">@Html.Icon("copy") Copy</button>
+      <a class="btn btn-sm btn-outline-secondary" href="mailto:?subject=Kiosk%20setup&body=@Uri.EscapeDataString(Model.Link)">@Html.Icon("envelope") Email</a>
+      <a class="btn btn-sm btn-outline-success" href="https://wa.me/?text=@Uri.EscapeDataString(Model.Link)" target="_blank" rel="noopener">@Html.Icon("whatsapp") WhatsApp</a>
+    </div>
+  </div></div>
+</div>
+<a class="btn btn-link mt-4 ps-0" asp-action="Index">&larr; Back to devices</a>

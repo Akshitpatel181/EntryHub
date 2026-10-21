@@ -1,0 +1,17 @@
+@model KioskVm
+@{ Layout = "_KioskLayout"; ViewData["Title"] = Model.CompanyName + " check-in"; }
+<div class="k-wrap"><div id="app"></div></div>
+<div class="k-device">@Model.DeviceName</div>
+@section Scripts {
+  <script>
+    window.KIOSK = {
+      company: @Json.Serialize(Model.CompanyName),
+      welcome: @Json.Serialize(Model.WelcomeText),
+      requirePhoto: @Json.Serialize(Model.RequirePhoto),
+      visitorTypes: @Json.Serialize(Model.VisitorTypes),
+      questions: @Json.Serialize(Model.Questions),
+      hosts: @Json.Serialize(Model.Hosts)
+    };
+  </script>
+  <script src="~/js/kiosk.js" asp-append-version="true"></script>
+}

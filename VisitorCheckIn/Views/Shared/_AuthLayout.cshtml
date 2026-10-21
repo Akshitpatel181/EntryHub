@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@ViewData["Title"] · Visitor Check-In</title>
+  <meta name="theme-color" content="#10252e" />
+  <link rel="icon" type="image/png" href="~/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="~/icons/icon-192.png" />
+  <link href="~/lib/bootstrap/bootstrap.min.css" rel="stylesheet" />
+  <link href="~/css/site.css" rel="stylesheet" asp-append-version="true" />
+</head>
+<body class="auth-body">
+  @RenderBody()
+  @Html.AntiForgeryToken()
+  <script src="~/js/common.js" asp-append-version="true"></script>
+  @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

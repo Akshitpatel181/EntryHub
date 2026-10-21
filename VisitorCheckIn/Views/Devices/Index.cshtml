@@ -1,0 +1,49 @@
+@model DevicesIndexVm
+@{ ViewData["Title"] = "Kiosk devices"; var online = DateTime.UtcNow.AddMinutes(-3); }
+<div class="page-head">
+  <div><h1>Kiosk devices</h1><p>Only paired browsers can open the kiosk. Revoke a device and it returns to the pairing screen immediately.</p></div>
+  <div class="page-actions">
+    <a class="btn btn-outline-secondary" asp-action="Guide">@Html.Icon("lock") Lock-down guide</a>
+    <a class="btn btn-primary" asp-action="Add">@Html.Icon("plus-lg") Add device</a>
+  </div>
+</div>
+<div class="table-wrap"><div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th>Device</th><th>Status</th><th>Paired via</th><th>Paired</th><th>Last seen</th><th></th></tr></thead><tbody>
+  @foreach (var d in Model.Devices)
+  {
+    <tr class="@(d.IsRevoked ? "is-off" : "")">
+      <td>
+        <form asp-action="Rename" asp-route-id="@d.Id" method="post" class="d-flex gap-2">
+          <input name="name" value="@d.Name" class="form-control form-control-sm" style="max-width:220px" aria-label="Device name" />
+          <button class="btn btn-sm btn-outline-secondary">Rename</button>
+        </form>
+        <div class="t-sub text-truncate mt-1" style="max-width:320px" title="@d.UserAgent">@d.UserAgent</div>
+      </td>
+      <td>@if (d.IsRevoked) { <span class="pill bad">Revoked</span> } else if (d.LastSeenUtc > online) { <span class="pill ok">Online</span> } else { <span class="pill warn">Offline</span> }</td>
+      <td><span class="chip">@d.PairMethod</span></td>
+      <td><time class="lt" datetime="@d.PairedUtc.ToIso()"></time></td>
+      <td>@if (d.LastSeenUtc != null) { <time class="lt" datetime="@d.LastSeenUtc.ToIso()"></time> } else { <span class="text-muted">Never</span> }</td>
+      <td>
+        <div class="row-actions">
+        @if (d.IsRevoked) { <form asp-action="Restore" asp-route-id="@d.Id" method="post"><button class="btn btn-sm btn-outline-success">@Html.Icon("arrow-counterclockwise") Restore</button></form> }
+        else { <form asp-action="Revoke" asp-route-id="@d.Id" method="post" onsubmit="return confirm('Revoke this device?')"><button class="btn btn-sm btn-outline-warning">@Html.Icon("ban") Revoke</button></form> }
+        <form asp-action="Remove" asp-route-id="@d.Id" method="post" onsubmit="return confirm('Remove permanently?')"><button class="btn btn-sm btn-outline-danger" aria-label="Remove device">@Html.Icon("trash3")</button></form>
+        </div>
+      </td>
+    </tr>
+  }
+  @if (!Model.Devices.Any()) { <tr><td colspan="6" class="empty">@Html.Icon("tablet")<b>No devices yet</b>Click “Add device” to turn a tablet or laptop into a kiosk.</td></tr> }
+</tbody></table></div></div>
+
+@if (Model.Pending.Any())
+{
+  <h2 class="section-title mt-5">Pending enrolments <span class="count">@Model.Pending.Count</span></h2>
+  <div class="table-wrap"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Name</th><th>Code</th><th>Used</th><th>Expires</th><th></th></tr></thead><tbody>
+  @foreach (var e in Model.Pending)
+  {
+    <tr><td class="t-name">@e.DeviceName</td><td><code>@e.Code</code></td><td>@e.UseCount / @e.MaxUses</td>
+      <td><time class="lt" datetime="@e.ExpiresUtc.ToIso()"></time></td>
+      <td><div class="row-actions"><form asp-action="CancelEnrollment" asp-route-id="@e.Id" method="post"><button class="btn btn-sm btn-outline-danger">Cancel</button></form></div></td></tr>
+  }
+  </tbody></table></div></div>
+}

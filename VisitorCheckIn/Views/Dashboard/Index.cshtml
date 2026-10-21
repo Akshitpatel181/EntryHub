@@ -1,0 +1,28 @@
+@model DashboardVm
+@{ ViewData["Title"] = "Dashboard"; }
+<div class="page-head">
+  <div><h1>Dashboard</h1><p>Who is in the building right now, and whether your kiosks are healthy.</p></div>
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="stat-ico">@Html.Icon("door-open")</span><div><div class="num">@Model.TodayVisits</div><div class="lbl">Visits today</div></div></div>
+  <div class="stat"><span class="stat-ico info">@Html.Icon("person-check")</span><div><div class="num">@Model.OnSite.Count</div><div class="lbl">On site now</div></div></div>
+  <div class="stat"><span class="stat-ico @(Model.DeviceCount > 0 && Model.OnlineDevices == 0 ? "warn" : "ink")">@Html.Icon("tablet")</span><div><div class="num">@Model.OnlineDevices<small> / @Model.DeviceCount</small></div><div class="lbl">Kiosks online</div></div></div>
+  <div class="stat"><span class="stat-ico ink">@Html.Icon("people")</span><div><div class="num">@Model.HostCount</div><div class="lbl">Active hosts</div></div></div>
+</div>
+
+<h2 class="section-title">Currently on site <span class="count">@Model.OnSite.Count</span></h2>
+<div class="table-wrap"><div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th>Visitor</th><th>Visiting</th><th>Checked in</th><th></th></tr></thead>
+  <tbody>
+  @foreach (var v in Model.OnSite)
+  {
+    <tr>
+      <td><div class="person"><partial name="_VisitorAvatar" model="v" /><div><div class="t-name">@v.VisitorName</div><div class="t-sub">@(string.IsNullOrWhiteSpace(v.VisitorCompany) ? v.VisitorType : v.VisitorCompany + " · " + v.VisitorType)</div></div></div></td>
+      <td>@v.Host.Name</td>
+      <td><time class="lt" datetime="@v.CheckInUtc.ToIso()"></time></td>
+      <td class="text-end"><form asp-controller="Visits" asp-action="CheckOut" asp-route-id="@v.Id" method="post"><button class="btn btn-sm btn-outline-danger">Check out</button></form></td>
+    </tr>
+  }
+  @if (!Model.OnSite.Any()) { <tr><td colspan="4" class="empty">@Html.Icon("person-walking")<b>Nobody is on site</b>Visitors appear here as soon as they check in at a kiosk.</td></tr> }
+  </tbody></table></div></div>

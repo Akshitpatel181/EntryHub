@@ -1,0 +1,9 @@
+@model Visit
+@if (!string.IsNullOrEmpty(Model.PhotoToken))
+{
+  <a class="avatar-link" href="/p/@Model.PhotoToken" target="_blank" rel="noopener" title="Open photo"><img class="avatar photo" src="/p/@Model.PhotoToken" alt="Photo of @Model.VisitorName" loading="lazy" /></a>
+}
+else
+{
+  <span class="avatar @Model.VisitorName.AvatarClass()">@Model.VisitorName.Initials()</span>
+}

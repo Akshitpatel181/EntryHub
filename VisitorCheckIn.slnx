@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+    <File Path="RUN.bat" />
+    <File Path="run.sh" />
+    <File Path=".gitignore" />
+  </Folder>
+  <Folder Name="/docs/">
+    <File Path="docs/TESTING.md" />
+  </Folder>
+  <Folder Name="/tests/">
+    <File Path="tests/smoke_test.py" />
+  </Folder>
+  <Project Path="VisitorCheckIn/VisitorCheckIn.csproj" />
+</Solution>

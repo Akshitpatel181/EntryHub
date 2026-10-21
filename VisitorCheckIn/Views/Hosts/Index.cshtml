@@ -1,0 +1,28 @@
+@model List<VisitHost>
+@{ ViewData["Title"] = "Hosts"; }
+<div class="page-head">
+  <div><h1>Hosts</h1><p>The people visitors come to see. Hosts with a login can receive alerts on all of their devices.</p></div>
+  <div class="page-actions"><a class="btn btn-primary" asp-action="Create">@Html.Icon("plus-lg") Add host</a></div>
+</div>
+<div class="table-wrap"><div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th>Host</th><th>Phone</th><th>Login</th><th>Alert devices</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  @foreach (var h in Model)
+  {
+    <tr class="@(h.IsActive ? "" : "is-off")">
+      <td><div class="person"><span class="avatar @h.Name.AvatarClass()">@h.Name.Initials()</span><div><div class="t-name">@h.Name</div><div class="t-sub">@h.Email</div></div></div></td>
+      <td class="text-nowrap">@h.Phone</td>
+      <td>@if (h.UserId != null) { <span class="pill ok">Can sign in</span> } else { <span class="pill quiet">No login</span> }</td>
+      <td>@h.Devices.Count</td>
+      <td>@if (h.IsActive) { <span class="pill ok">Active</span> } else { <span class="pill quiet">Inactive</span> }</td>
+      <td>
+        <div class="row-actions">
+          <form asp-action="TestNotify" asp-route-id="@h.Id" method="post"><button class="btn btn-sm btn-outline-secondary" title="Send a test alert">@Html.Icon("bell") Test</button></form>
+          <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@h.Id">@Html.Icon("pencil") Edit</a>
+          <form asp-action="Delete" asp-route-id="@h.Id" method="post" onsubmit="return confirm('Delete this host?')"><button class="btn btn-sm btn-outline-danger" aria-label="Delete host">@Html.Icon("trash3")</button></form>
+        </div>
+      </td>
+    </tr>
+  }
+  @if (!Model.Any()) { <tr><td colspan="6" class="empty">@Html.Icon("people")<b>No hosts yet</b>Add the first person visitors can ask for.</td></tr> }
+  </tbody></table></div></div>
