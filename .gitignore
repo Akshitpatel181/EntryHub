@@ -1,7 +1,13 @@
+# Visual Studio
 .vs/
 bin/
 obj/
-*.user
-*.suo
-*.log
-__pycache__/
+
+# Local configuration and secrets
+secrets.json
+appsettings.Development.json
+
+# Local database files
+*.db
+*.mdf
+*.ldf
