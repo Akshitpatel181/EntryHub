@@ -1,6 +1,6 @@
 {
-  "name": "Visitor Check-In Kiosk",
-  "short_name": "Check-In",
+  "name": "EntryHub Kiosk",
+  "short_name": "EntryHub",
   "start_url": "/Kiosk",
   "scope": "/",
   "display": "fullscreen",
