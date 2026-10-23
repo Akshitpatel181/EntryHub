@@ -11,3 +11,4 @@ appsettings.Development.json
 *.db
 *.mdf
 *.ldf
+*.csproj.user

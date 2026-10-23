@@ -85,14 +85,14 @@ public class KioskService
         await _db.SaveChangesAsync();
         return raw;
     }
-
     public void IssueCookie(HttpContext ctx, string rawToken) =>
         ctx.Response.Cookies.Append(CookieName, rawToken, new CookieOptions
         {
             HttpOnly = true,
-            Secure = ctx.Request.IsHttps,
+            Secure = true,
             SameSite = SameSiteMode.Lax,
             Expires = DateTimeOffset.UtcNow.AddYears(1),
             IsEssential = true
         });
+
 }

@@ -20,12 +20,29 @@ public static class DbInitializer
             if (!await roles.RoleExistsAsync(r)) await roles.CreateAsync(new IdentityRole(r));
 
         var users = sp.GetRequiredService<UserManager<IdentityUser>>();
-        var email = cfg["Admin:Email"] ?? "admin@example.com";
-        if (await users.FindByEmailAsync(email) == null)
+        var email = cfg["Admin:Email"];
+        var password = cfg["Admin:Password"];
+
+        if (!string.IsNullOrWhiteSpace(email) &&
+            !string.IsNullOrWhiteSpace(password) &&
+            await users.FindByEmailAsync(email) == null)
         {
-            var admin = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true };
-            var res = await users.CreateAsync(admin, cfg["Admin:Password"] ?? "ChangeMe123");
-            if (res.Succeeded) await users.AddToRoleAsync(admin, "Admin");
+            var admin = new IdentityUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true
+            };
+
+            var result = await users.CreateAsync(admin, password);
+
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    "Administrator account creation failed.");
+            }
+
+            await users.AddToRoleAsync(admin, "Admin");
         }
 
         if (!await db.Questions.AnyAsync())

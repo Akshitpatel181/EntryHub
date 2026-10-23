@@ -22,13 +22,22 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(o =>
     o.Lockout.MaxFailedAccessAttempts = 8;
 }).AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
 
+
 builder.Services.ConfigureApplicationCookie(o =>
 {
     o.LoginPath = "/Account/Login";
     o.AccessDeniedPath = "/Account/Denied";
-    o.ExpireTimeSpan = TimeSpan.FromDays(30);
-    o.SlidingExpiration = true;
+
+    // Require re-authentication after an 8-hour session.
+    o.ExpireTimeSpan = TimeSpan.FromHours(8);
+    o.SlidingExpiration = false;
+
+    // Protect authentication cookies.
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.Cookie.SameSite = SameSiteMode.Lax;
 });
+
 
 builder.Services.AddControllersWithViews(o => o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
 builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
@@ -48,12 +57,17 @@ builder.Services.AddRateLimiter(o =>
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimit:PairPerMinute", 10), Window = TimeSpan.FromMinutes(1) }));
 });
 
+
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
-    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    o.KnownNetworks.Clear();
-    o.KnownProxies.Clear();
+    o.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+
+    o.KnownProxies.Add(System.Net.IPAddress.Loopback);
+    o.KnownProxies.Add(System.Net.IPAddress.IPv6Loopback);
 });
+
 
 var app = builder.Build();
 
