@@ -1,28 +1,756 @@
 @model DashboardVm
-@{ ViewData["Title"] = "Dashboard"; }
-<div class="page-head">
-  <div><h1>Dashboard</h1><p>Who is in the building right now, and whether your kiosks are healthy.</p></div>
-</div>
 
-<div class="stats">
-  <div class="stat"><span class="stat-ico">@Html.Icon("door-open")</span><div><div class="num">@Model.TodayVisits</div><div class="lbl">Visits today</div></div></div>
-  <div class="stat"><span class="stat-ico info">@Html.Icon("person-check")</span><div><div class="num">@Model.OnSite.Count</div><div class="lbl">On site now</div></div></div>
-  <div class="stat"><span class="stat-ico @(Model.DeviceCount > 0 && Model.OnlineDevices == 0 ? "warn" : "ink")">@Html.Icon("tablet")</span><div><div class="num">@Model.OnlineDevices<small> / @Model.DeviceCount</small></div><div class="lbl">Kiosks online</div></div></div>
-  <div class="stat"><span class="stat-ico ink">@Html.Icon("people")</span><div><div class="num">@Model.HostCount</div><div class="lbl">Active hosts</div></div></div>
-</div>
+@{
+    ViewData["Title"] = "Dashboard";
+}
 
-<h2 class="section-title">Currently on site <span class="count">@Model.OnSite.Count</span></h2>
-<div class="table-wrap"><div class="table-responsive"><table class="table align-middle">
-  <thead><tr><th>Visitor</th><th>Visiting</th><th>Checked in</th><th></th></tr></thead>
-  <tbody>
-  @foreach (var v in Model.OnSite)
-  {
-    <tr>
-      <td><div class="person"><partial name="_VisitorAvatar" model="v" /><div><div class="t-name">@v.VisitorName</div><div class="t-sub">@(string.IsNullOrWhiteSpace(v.VisitorCompany) ? v.VisitorType : v.VisitorCompany + " · " + v.VisitorType)</div></div></div></td>
-      <td>@v.Host.Name</td>
-      <td><time class="lt" datetime="@v.CheckInUtc.ToIso()"></time></td>
-      <td class="text-end"><form asp-controller="Visits" asp-action="CheckOut" asp-route-id="@v.Id" method="post"><button class="btn btn-sm btn-outline-danger">Check out</button></form></td>
-    </tr>
-  }
-  @if (!Model.OnSite.Any()) { <tr><td colspan="4" class="empty">@Html.Icon("person-walking")<b>Nobody is on site</b>Visitors appear here as soon as they check in at a kiosk.</td></tr> }
-  </tbody></table></div></div>
+<style>
+    /* ENTRYHUB - PROFESSIONAL DASHBOARD */
+
+    .eh-dashboard,
+    .eh-dashboard * {
+        box-sizing: border-box;
+    }
+
+    .eh-dashboard {
+        --eh-primary: #0b8982;
+        --eh-navy: #173742;
+        --eh-muted: #708590;
+        --eh-border: #e4eaee;
+        --eh-surface: #ffffff;
+        width: 100%;
+        color: var(--eh-navy);
+        padding-bottom: 35px;
+    }
+
+    /* HEADER */
+
+    .eh-dash-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 29px;
+    }
+
+    .eh-dash-title {
+        margin: 0 0 7px;
+        font-size: clamp(27px, 3vw, 34px);
+        font-weight: 750;
+        color: #183640;
+        letter-spacing: -.045em;
+        line-height: 1.2;
+    }
+
+    .eh-dash-subtitle {
+        color: #718792;
+        font-size: 14px;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .eh-dash-date {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 10px 15px;
+        background: #fff;
+        border: 1px solid var(--eh-border);
+        border-radius: 9px;
+        color: #607985;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+        .eh-dash-date svg {
+            width: 17px;
+            height: 17px;
+            stroke: #0b8982;
+            fill: none;
+            stroke-width: 1.8;
+        }
+
+    /* STATISTICS */
+
+    .eh-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+        margin-bottom: 34px;
+    }
+
+    .eh-stat-card {
+        background: #fff;
+        border: 1px solid var(--eh-border);
+        border-radius: 13px;
+        padding: 23px;
+        min-width: 0;
+        box-shadow: 0 4px 18px rgba(19, 49, 61, .025);
+        transition: box-shadow .2s, transform .2s;
+    }
+
+        .eh-stat-card:hover {
+            box-shadow: 0 10px 28px rgba(19, 49, 61, .07);
+            transform: translateY(-2px);
+        }
+
+    .eh-stat-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 22px;
+    }
+
+    .eh-stat-label {
+        color: #718590;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .eh-stat-icon {
+        width: 43px;
+        height: 43px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: #e5f5f2;
+        color: #07877e;
+        flex-shrink: 0;
+    }
+
+        .eh-stat-icon svg {
+            width: 22px;
+            height: 22px;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .eh-stat-icon.blue {
+            background: #e9f0fc;
+            color: #4167a7;
+        }
+
+        .eh-stat-icon.amber {
+            background: #fff4df;
+            color: #b57a1b;
+        }
+
+        .eh-stat-icon.navy {
+            background: #eaf0f3;
+            color: #375767;
+        }
+
+    .eh-stat-number {
+        font-size: 34px;
+        line-height: 1.1;
+        font-weight: 750;
+        letter-spacing: -.05em;
+        color: #183640;
+    }
+
+        .eh-stat-number small {
+            font-size: 16px;
+            font-weight: 500;
+            color: #8da2ac;
+            letter-spacing: 0;
+        }
+
+    .eh-stat-caption {
+        margin-top: 10px;
+        color: #8a9da5;
+        font-size: 12px;
+    }
+
+    /* STATUS INDICATOR */
+
+    .eh-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #15796f;
+    }
+
+        .eh-status::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #16a085;
+        }
+
+        .eh-status.offline {
+            color: #ac6b23;
+        }
+
+            .eh-status.offline::before {
+                background: #e7a43b;
+            }
+
+    /* VISITOR SECTION */
+
+    .eh-section {
+        background: #fff;
+        border: 1px solid var(--eh-border);
+        border-radius: 13px;
+        overflow: hidden;
+        box-shadow: 0 4px 18px rgba(19, 49, 61, .025);
+    }
+
+    .eh-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 23px 25px;
+        border-bottom: 1px solid #edf1f3;
+    }
+
+    .eh-section-title {
+        color: #183640;
+        font-size: 18px;
+        font-weight: 750;
+        margin: 0 0 5px;
+        letter-spacing: -.02em;
+    }
+
+    .eh-section-description {
+        font-size: 13px;
+        color: #8498a1;
+        margin: 0;
+    }
+
+    .eh-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 30px;
+        background: #e6f6f2;
+        color: #07877e;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+        .eh-count::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #0aa395;
+        }
+
+    /* TABLE */
+
+    .eh-table-scroll {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .eh-table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 620px;
+        margin: 0;
+        font-size: 14px;
+    }
+
+        .eh-table thead {
+            background: #f8fafb;
+        }
+
+        .eh-table th {
+            text-align: left;
+            font-size: 11px;
+            font-weight: 750;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #81949c;
+            padding: 16px 24px;
+            border-bottom: 1px solid #edf1f3;
+            white-space: nowrap;
+        }
+
+        .eh-table td {
+            padding: 19px 24px;
+            border-bottom: 1px solid #eef2f4;
+            color: #526d79;
+            vertical-align: middle;
+        }
+
+        .eh-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .eh-table tbody tr:hover {
+            background: #fbfdfd;
+        }
+
+    .eh-person {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .eh-person-avatar {
+        flex-shrink: 0;
+    }
+
+    .eh-person-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1b3944;
+        margin-bottom: 4px;
+    }
+
+    .eh-person-detail {
+        font-size: 12px;
+        color: #8ba0a8;
+    }
+
+    .eh-host-name {
+        color: #405d68;
+        font-weight: 600;
+    }
+
+    /* CHECKOUT BUTTON */
+
+    .eh-checkout-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 9px 14px;
+        white-space: nowrap;
+        border-radius: 7px;
+        border: 1px solid #efcece;
+        background: #fff;
+        color: #b74b4b;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background .2s;
+    }
+
+        .eh-checkout-btn:hover {
+            background: #fff1f1;
+        }
+
+        .eh-checkout-btn:focus-visible {
+            outline: 2px solid #b74b4b;
+            outline-offset: 2px;
+        }
+
+    /* EMPTY STATE */
+
+    .eh-empty {
+        padding: 65px 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .eh-empty-icon {
+        width: 66px;
+        height: 66px;
+        display: grid;
+        place-items: center;
+        background: #eaf5f3;
+        color: #158d82;
+        border-radius: 18px;
+        margin-bottom: 18px;
+    }
+
+        .eh-empty-icon svg {
+            width: 30px;
+            height: 30px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.6;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+    .eh-empty-title {
+        font-size: 17px;
+        font-weight: 750;
+        color: #28434d;
+        margin: 0 0 7px;
+    }
+
+    .eh-empty-text {
+        max-width: 390px;
+        font-size: 13px;
+        color: #8a9fa8;
+        line-height: 1.7;
+        margin: 0;
+    }
+
+    /* RESPONSIVE */
+
+    @@media (max-width: 1100px) {
+        .eh-stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 650px) {
+        .eh-stats-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .eh-stat-card {
+            padding: 20px;
+        }
+
+        .eh-dash-header {
+            align-items: flex-start;
+        }
+
+        .eh-section-header {
+            padding: 20px;
+        }
+
+        .eh-table th,
+        .eh-table td {
+            padding: 15px;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .eh-stat-card {
+            transition: none;
+        }
+
+            .eh-stat-card:hover {
+                transform: none;
+            }
+    }
+</style>
+
+<div class="eh-dashboard">
+
+    <!-- PAGE HEADER -->
+
+    <div class="eh-dash-header">
+
+        <div>
+            <h1 class="eh-dash-title">
+                Dashboard
+            </h1>
+
+            <p class="eh-dash-subtitle">
+                A real-time overview of your visitors,
+                hosts and kiosk devices.
+            </p>
+        </div>
+
+        <div class="eh-dash-date">
+
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M7 3v4M17 3v4M3 10h18" />
+            </svg>
+
+            @DateTime.Now.ToString("dddd, dd MMMM yyyy")
+
+        </div>
+
+    </div>
+
+
+    <!-- STATISTICS -->
+
+    <div class="eh-stats-grid">
+
+        <!-- VISITS TODAY -->
+
+        <div class="eh-stat-card">
+
+            <div class="eh-stat-top">
+
+                <span class="eh-stat-label">
+                    Visits today
+                </span>
+
+                <span class="eh-stat-icon">
+
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 21V3h12v18M4 21h16" />
+                        <path d="M10 12h5m-3-3 3 3-3 3" />
+                    </svg>
+
+                </span>
+
+            </div>
+
+            <div class="eh-stat-number">
+                @Model.TodayVisits
+            </div>
+
+            <div class="eh-stat-caption">
+                Total visitor check-ins today
+            </div>
+
+        </div>
+
+
+        <!-- ON SITE NOW -->
+
+        <div class="eh-stat-card">
+
+            <div class="eh-stat-top">
+
+                <span class="eh-stat-label">
+                    Currently on site
+                </span>
+
+                <span class="eh-stat-icon blue">
+
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
+                        <path d="m17 13 2 2 3-3" />
+                    </svg>
+
+                </span>
+
+            </div>
+
+            <div class="eh-stat-number">
+                @Model.OnSite.Count
+            </div>
+
+            <div class="eh-stat-caption">
+                Visitors currently checked in
+            </div>
+
+        </div>
+
+
+        <!-- KIOSK STATUS -->
+
+        <div class="eh-stat-card">
+
+            <div class="eh-stat-top">
+
+                <span class="eh-stat-label">
+                    Kiosk devices
+                </span>
+
+                <span class="eh-stat-icon @(Model.DeviceCount > 0 && Model.OnlineDevices == 0 ? "amber" : "navy")">
+
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="5" y="2" width="14" height="20" rx="2" />
+                        <path d="M10 18h4" />
+                    </svg>
+
+                </span>
+
+            </div>
+
+            <div class="eh-stat-number">
+                @Model.OnlineDevices
+                <small>/ @Model.DeviceCount</small>
+            </div>
+
+            <div class="eh-stat-caption">
+
+                <span class="eh-status @(Model.DeviceCount > 0 && Model.OnlineDevices == 0 ? "offline" : "")">
+                    @Model.OnlineDevices online
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- ACTIVE HOSTS -->
+
+        <div class="eh-stat-card">
+
+            <div class="eh-stat-top">
+
+                <span class="eh-stat-label">
+                    Active hosts
+                </span>
+
+                <span class="eh-stat-icon navy">
+
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="9" cy="8" r="3" />
+                        <path d="M3 20v-2a6 6 0 0 1 12 0v2" />
+                        <circle cx="18" cy="9" r="2" />
+                        <path d="M17 15c2.5 0 4 1.5 4 4" />
+                    </svg>
+
+                </span>
+
+            </div>
+
+            <div class="eh-stat-number">
+                @Model.HostCount
+            </div>
+
+            <div class="eh-stat-caption">
+                Available hosts in your system
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- CURRENT VISITORS -->
+
+    <section class="eh-section">
+
+        <div class="eh-section-header">
+
+            <div>
+                <h2 class="eh-section-title">
+                    Currently on site
+                </h2>
+
+                <p class="eh-section-description">
+                    Visitors who are currently checked in.
+                </p>
+            </div>
+
+            <span class="eh-count">
+                @Model.OnSite.Count on site
+            </span>
+
+        </div>
+
+        @if (Model.OnSite.Any())
+        {
+            <div class="eh-table-scroll">
+
+                <table class="eh-table">
+
+                    <thead>
+                        <tr>
+                            <th>Visitor</th>
+                            <th>Visiting</th>
+                            <th>Checked in</th>
+                            <th style="text-align:right">
+                                Action
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var v in Model.OnSite)
+                        {
+                            <tr>
+
+                                <td>
+
+                                    <div class="eh-person">
+
+                                        <div class="eh-person-avatar">
+                                            <partial name="_VisitorAvatar"
+                                                     model="v" />
+                                        </div>
+
+                                        <div>
+
+                                            <div class="eh-person-name">
+                                                @v.VisitorName
+                                            </div>
+
+                                            <div class="eh-person-detail">
+
+                                                @(string.IsNullOrWhiteSpace(v.VisitorCompany)
+                                                    ? v.VisitorType
+                                                    : v.VisitorCompany + " · " + v.VisitorType)
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+                                <td>
+                                    <span class="eh-host-name">
+                                        @v.Host.Name
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <time class="lt"
+                                          datetime="@v.CheckInUtc.ToIso()">
+                                    </time>
+                                </td>
+
+                                <td style="text-align:right">
+
+                                    <form asp-controller="Visits"
+                                          asp-action="CheckOut"
+                                          asp-route-id="@v.Id"
+                                          method="post">
+
+                                        <button type="submit"
+                                                class="eh-checkout-btn">
+                                            Check out
+                                        </button>
+
+                                    </form>
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+        }
+        else
+        {
+            <!-- EMPTY STATE -->
+
+            <div class="eh-empty">
+
+                <div class="eh-empty-icon">
+
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="7" r="4" />
+                        <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
+                        <path d="M8 14h8" />
+                    </svg>
+
+                </div>
+
+                <h3 class="eh-empty-title">
+                    No visitors on site
+                </h3>
+
+                <p class="eh-empty-text">
+                    Your workplace is currently clear.
+                    Visitors will appear here automatically
+                    when they check in through a registered kiosk.
+                </p>
+
+            </div>
+        }
+
+    </section>
+
+</div>

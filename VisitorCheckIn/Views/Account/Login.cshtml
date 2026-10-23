@@ -1,18 +1,451 @@
 @model LoginVm
-@{ Layout = "_AuthLayout"; ViewData["Title"] = "Sign in"; }
-<div class="auth-wrap">
-  <div class="auth-brand"><partial name="_BrandMark" />EntryHub</div>
-  <div class="auth-card">
-    <h1>Sign in</h1>
-    <p class="sub">Use your admin or host account.</p>
-    <form method="post">
-      <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
-      <div asp-validation-summary="All" class="text-danger"></div>
-      <div class="mb-3"><label asp-for="Email" class="form-label">Email</label><input asp-for="Email" class="form-control" autocomplete="username" autofocus /></div>
-      <div class="mb-3"><label asp-for="Password" class="form-label">Password</label><input asp-for="Password" class="form-control" autocomplete="current-password" /></div>
-      <div class="form-check mb-4"><input asp-for="Remember" class="form-check-input" /><label asp-for="Remember" class="form-check-label">Keep me signed in</label></div>
-      <button class="btn btn-primary btn-lg w-100">Sign in</button>
-    </form>
-  </div>
-  <div class="auth-foot"><a href="/" style="color:#9fb6c0">&larr; Back to start</a></div>
-</div>
+
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sign in";
+}
+
+<style>
+    /* ENTRYHUB - CLEAN FULLSCREEN LOGIN */
+
+    .entry-login,
+    .entry-login * {
+        box-sizing: border-box;
+    }
+
+    .entry-login {
+        display: grid;
+        grid-template-columns: 48% 52%;
+        width: 100%;
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+        padding: 0;
+        font-family: inherit;
+    }
+
+    /* LEFT BRANDING PANEL */
+
+    .entry-left {
+        background: #102934;
+        color: #ffffff;
+        padding: clamp(30px, 5vw, 80px);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .entry-left::after {
+            content: "";
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            border: 1px solid rgba(255,255,255,.06);
+            border-radius: 50%;
+            right: -240px;
+            bottom: -250px;
+            pointer-events: none;
+        }
+
+    .entry-brand {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        font-size: 26px;
+        font-weight: 750;
+        letter-spacing: -.7px;
+    }
+
+    .entry-brand-mark {
+        width: 45px;
+        height: 45px;
+        display: grid;
+        place-items: center;
+        background: #078b84;
+        border-radius: 11px;
+    }
+
+        .entry-brand-mark svg {
+            width: 25px;
+            height: 25px;
+            fill: white;
+        }
+
+    .entry-message {
+        max-width: 530px;
+        position: relative;
+        z-index: 1;
+    }
+
+        .entry-message h1 {
+            color: #fff;
+            font-size: clamp(40px, 4.2vw, 64px);
+            font-weight: 780;
+            letter-spacing: -.045em;
+            line-height: 1.12;
+            margin-bottom: 25px;
+        }
+
+        .entry-message p {
+            color: #b5cbd3;
+            font-size: 18px;
+            line-height: 1.75;
+            margin: 0;
+        }
+
+    .entry-copyright {
+        font-size: 13px;
+        color: #88a6b1;
+    }
+
+    /* RIGHT LOGIN PANEL */
+
+    .entry-right {
+        background: #ffffff;
+        padding: 40px 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+    }
+
+    .entry-form-container {
+        width: 100%;
+        max-width: 420px;
+    }
+
+        .entry-form-container h2 {
+            font-size: 36px;
+            font-weight: 750;
+            letter-spacing: -.04em;
+            color: #16343e;
+            margin: 0 0 10px;
+        }
+
+    .entry-form-description {
+        color: #71838c;
+        font-size: 15px;
+        margin-bottom: 38px;
+    }
+
+    .entry-field {
+        margin-bottom: 23px;
+    }
+
+        .entry-field label {
+            display: block;
+            font-size: 14px;
+            font-weight: 650;
+            color: #30464f;
+            margin-bottom: 9px;
+        }
+
+    .entry-input {
+        display: block;
+        width: 100%;
+        height: 52px;
+        border: 1px solid #d8e2e5;
+        border-radius: 9px;
+        background: #fff;
+        padding: 0 15px;
+        font-size: 15px;
+        color: #16343e;
+        transition: border-color .2s, box-shadow .2s;
+    }
+
+        .entry-input:focus {
+            outline: none;
+            border-color: #078b84;
+            box-shadow: 0 0 0 3px rgba(7,139,132,.1);
+        }
+
+        .entry-input::placeholder {
+            color: #a1afb5;
+        }
+
+    .entry-password-wrap {
+        position: relative;
+    }
+
+        .entry-password-wrap input {
+            padding-right: 75px;
+        }
+
+    .entry-show-password {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: none;
+        background: transparent;
+        color: #078b84;
+        font-weight: 650;
+        font-size: 13px;
+        padding: 8px;
+        cursor: pointer;
+    }
+
+    .entry-remember {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 13px;
+        color: #536b75;
+        margin: 7px 0 28px;
+        cursor: pointer;
+    }
+
+        .entry-remember input {
+            width: 16px;
+            height: 16px;
+            accent-color: #078b84;
+        }
+
+    .entry-submit {
+        width: 100%;
+        height: 53px;
+        background: #078b84;
+        color: white;
+        border: none;
+        border-radius: 9px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background .2s;
+    }
+
+        .entry-submit:hover {
+            background: #066f6a;
+        }
+
+        .entry-submit:focus-visible,
+        .entry-show-password:focus-visible {
+            outline: 3px solid #46c7bb;
+            outline-offset: 3px;
+        }
+
+    .entry-back {
+        display: block;
+        text-align: center;
+        margin-top: 31px;
+        color: #70858e;
+        font-size: 14px;
+        text-decoration: none;
+    }
+
+        .entry-back:hover {
+            color: #078b84;
+            text-decoration: underline;
+        }
+
+    .entry-error {
+        color: #b42318;
+        font-size: 13px;
+        margin-bottom: 14px;
+    }
+
+    .entry-validation {
+        color: #b42318;
+        display: block;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    /* TABLET / MOBILE */
+
+    @@media (max-width: 850px) {
+        .entry-login {
+            grid-template-columns: 1fr;
+        }
+
+        .entry-left {
+            padding: 28px 24px;
+            min-height: auto;
+        }
+
+        .entry-message,
+        .entry-copyright {
+            display: none;
+        }
+
+        .entry-right {
+            min-height: calc(100dvh - 101px);
+            padding: 50px 24px;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .entry-form-container h2 {
+            font-size: 30px;
+        }
+
+        .entry-form-description {
+            margin-bottom: 28px;
+        }
+
+        .entry-right {
+            align-items: flex-start;
+            padding-top: 65px;
+        }
+    }
+</style>
+
+<main class="entry-login">
+
+    <!-- LEFT SIDE -->
+    <section class="entry-left"
+             aria-label="About EntryHub">
+
+        <div class="entry-brand">
+            <span class="entry-brand-mark">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="7.5" r="4" />
+                    <path d="M4 21c0-4.5 3.2-7.5 8-7.5s8 3 8 7.5z" />
+                </svg>
+            </span>
+            EntryHub
+        </div>
+
+        <div class="entry-message">
+            <h1>
+                Your Front Desk,<br />
+                Reimagined.
+            </h1>
+
+            <p>
+                A smarter way to welcome visitors,
+                streamline check-ins and keep your
+                team connected.
+            </p>
+        </div>
+
+        <div class="entry-copyright">
+            &copy; @DateTime.Now.Year EntryHub.
+            All rights reserved.
+        </div>
+
+    </section>
+
+    <!-- RIGHT SIDE -->
+    <section class="entry-right"
+             aria-label="Account sign in">
+
+        <div class="entry-form-container">
+
+            <h2>Welcome back</h2>
+
+            <p class="entry-form-description">
+                Sign in to access your EntryHub account.
+            </p>
+
+            <form asp-controller="Account"
+                  asp-action="Login"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <input type="hidden"
+                       name="returnUrl"
+                       value="@ViewBag.ReturnUrl" />
+
+                <div asp-validation-summary="ModelOnly"
+                     class="entry-error">
+                </div>
+
+                <!-- EMAIL -->
+                <div class="entry-field">
+
+                    <label asp-for="Email">
+                        Email address
+                    </label>
+
+                    <input asp-for="Email"
+                           type="email"
+                           class="entry-input"
+                           placeholder="Enter your email address"
+                           autocomplete="username"
+                           required />
+
+                    <span asp-validation-for="Email"
+                          class="entry-validation"></span>
+
+                </div>
+
+                <!-- PASSWORD -->
+                <div class="entry-field">
+
+                    <label asp-for="Password">
+                        Password
+                    </label>
+
+                    <div class="entry-password-wrap">
+
+                        <input asp-for="Password"
+                               type="password"
+                               id="entryPassword"
+                               class="entry-input"
+                               placeholder="Enter your password"
+                               autocomplete="current-password"
+                               required />
+
+                        <button type="button"
+                                class="entry-show-password"
+                                id="entryToggle"
+                                aria-controls="entryPassword"
+                                aria-pressed="false">
+                            Show
+                        </button>
+
+                    </div>
+
+                    <span asp-validation-for="Password"
+                          class="entry-validation"></span>
+
+                </div>
+
+                <!-- REMEMBER ME -->
+                <label class="entry-remember">
+
+                    <input asp-for="Remember" />
+
+                    Remember me
+
+                </label>
+
+                <!-- SIGN IN -->
+                <button type="submit"
+                        class="entry-submit">
+                    Sign in
+                </button>
+
+            </form>
+
+            <a asp-controller="Home"
+               asp-action="Index"
+               class="entry-back">
+                &larr; Back to home
+            </a>
+
+        </div>
+
+    </section>
+
+</main>
+
+<script>
+    (() => {
+        const input = document.getElementById("entryPassword");
+        const button = document.getElementById("entryToggle");
+
+        if (!input || !button) return;
+
+        button.addEventListener("click", () => {
+            const show = input.type === "password";
+            input.type = show ? "text" : "password";
+            button.textContent = show ? "Hide" : "Show";
+            button.setAttribute("aria-pressed", String(show));
+        });
+    })();
+</script>

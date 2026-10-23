@@ -1,85 +1,931 @@
+
 @{
-  var ctrl = (ViewContext.RouteData.Values["controller"] as string) ?? "";
-  string Active(string c) => string.Equals(ctrl, c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
-  var userName = User.Identity?.Name ?? "";
-  var isAdmin = User.IsInRole("Admin");
+    var ctrl = (ViewContext.RouteData.Values["controller"] as string) ?? "";
+    var action = (ViewContext.RouteData.Values["action"] as string) ?? "";
+
+    string Active(string controller) =>
+        string.Equals(ctrl, controller, StringComparison.OrdinalIgnoreCase)
+            ? "active" : "";
+
+    var userName = User.Identity?.Name ?? "";
+    var isAdmin = User.IsInRole("Admin");
+    var isHost = User.IsInRole("Host");
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+
+    var isPairPage =
+        string.Equals(ctrl, "Kiosk", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(action, "Pair", StringComparison.OrdinalIgnoreCase);
+
+    var isPasswordPage =
+        string.Equals(ctrl, "Account", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(action, "ChangePassword", StringComparison.OrdinalIgnoreCase);
 }
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>@ViewData["Title"] · Visitor Check-In</title>
-  <link rel="manifest" href="/host.webmanifest" />
-  <meta name="theme-color" content="#10252e" />
-  <link rel="icon" type="image/png" href="~/icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="~/icons/icon-192.png" />
-  <link href="~/lib/bootstrap/bootstrap.min.css" rel="stylesheet" />
-  <link href="~/css/site.css" rel="stylesheet" asp-append-version="true" />
-</head>
-<body>
-<div class="shell">
-  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
-    <a class="brand" asp-controller="Home" asp-action="Index"><partial name="_BrandMark" />EntryHub</a>
-    <nav>
-      @if (isAdmin)
-      {
-        <div class="nav-group">Front desk</div>
-        <a class="nav-link-x @Active("Dashboard")" asp-controller="Dashboard" asp-action="Index">@Html.Icon("speedometer2") Dashboard</a>
-        <a class="nav-link-x @Active("Visits")" asp-controller="Visits" asp-action="Index">@Html.Icon("journal-text") Visitor log</a>
-        <div class="nav-group">Set up</div>
-        <a class="nav-link-x @Active("Hosts")" asp-controller="Hosts" asp-action="Index">@Html.Icon("people") Hosts</a>
-        <a class="nav-link-x @Active("Questions")" asp-controller="Questions" asp-action="Index">@Html.Icon("patch-question") Questions</a>
-        <a class="nav-link-x @Active("Devices")" asp-controller="Devices" asp-action="Index">@Html.Icon("tablet") Kiosk devices</a>
-      }
-      @if (User.IsInRole("Host"))
-      {
-        <div class="nav-group">My account</div>
-        <a class="nav-link-x @Active("HostPortal")" asp-controller="HostPortal" asp-action="Index">@Html.Icon("bell") My notifications</a>
-      }
-      @if (User.Identity?.IsAuthenticated == true)
-      {
-        <div class="nav-group">Kiosk</div>
-        <a class="nav-link-x" asp-controller="Kiosk" asp-action="Index" target="_blank" rel="noopener">@Html.Icon("pc-display") Open kiosk screen</a>
-      }
-    </nav>
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-      <div class="sidebar-foot">
-        <div class="user-chip">
-          <span class="avatar">@userName.Initials()</span>
-          <span class="who"><b>@userName</b><span>@(isAdmin ? "Administrator" : "Host")</span></span>
-        </div>
-        <form asp-controller="Account" asp-action="Logout" method="post">
-          <button class="signout">@Html.Icon("box-arrow-right") Sign out</button>
-        </form>
-      </div>
-    }
-  </aside>
-  <div class="scrim" id="scrim"></div>
+    <meta charset="utf-8" />
 
-  <div class="main-col">
-    <header class="topbar">
-      <a class="brand" asp-controller="Home" asp-action="Index"><partial name="_BrandMark" />EntryHub</a>
-      <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-controls="sidebar">@Html.Icon("list")</button>
-    </header>
-    <main class="content">
-      @if (TempData["Ok"] != null) { <div class="alert alert-success mb-4" role="status">@Html.Icon("check2-circle")<div>@TempData["Ok"]</div></div> }
-      @if (TempData["Error"] != null) { <div class="alert alert-danger mb-4" role="alert">@Html.Icon("exclamation-triangle")<div>@TempData["Error"]</div></div> }
-      @RenderBody()
-    </main>
-  </div>
-</div>
-@Html.AntiForgeryToken()
-<script src="~/lib/bootstrap/bootstrap.bundle.min.js"></script>
-<script src="~/js/common.js" asp-append-version="true"></script>
-<script>
-  (function () {
-    var b = document.body, btn = document.getElementById('menuBtn'), sc = document.getElementById('scrim');
-    if (btn) btn.addEventListener('click', function () { b.classList.toggle('nav-open'); });
-    if (sc) sc.addEventListener('click', function () { b.classList.remove('nav-open'); });
-  })();
-</script>
-@await RenderSectionAsync("Scripts", required: false)
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1" />
+
+    <title>@ViewData["Title"] · EntryHub</title>
+
+    <meta name="theme-color" content="#071d2a" />
+
+    <link rel="manifest" href="/host.webmanifest" />
+
+    <link rel="icon"
+          type="image/png"
+          href="~/icons/icon-192.png" />
+
+    <link rel="apple-touch-icon"
+          href="~/icons/icon-192.png" />
+
+    <link href="~/lib/bootstrap/bootstrap.min.css"
+          rel="stylesheet" />
+
+    <link href="~/css/site.css"
+          rel="stylesheet"
+          asp-append-version="true" />
+
+    <style>
+        /* ==========================================
+           ENTRYHUB - PROFESSIONAL APPLICATION LAYOUT
+           ========================================== */
+
+        :root {
+            --eh-bg: #071d2a;
+            --eh-sidebar: #061923;
+            --eh-panel: #102b3a;
+            --eh-border: #244454;
+            --eh-accent: #14b8ac;
+            --eh-text: #e9f4f7;
+            --eh-muted: #91adba;
+            --eh-sidebar-width: 235px;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body.eh-app-body {
+            background: var(--eh-bg);
+            color: var(--eh-text);
+            overflow-x: hidden;
+        }
+
+        .eh-app-body *,
+        .eh-app-body *::before,
+        .eh-app-body *::after {
+            box-sizing: border-box;
+        }
+
+        /* APP SHELL */
+
+        .eh-app-shell {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            min-height: 100dvh;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ==========================================
+           SIDEBAR
+           ========================================== */
+
+        .eh-app-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1050;
+
+            display: flex;
+            flex-direction: column;
+
+            width: var(--eh-sidebar-width);
+            height: 100vh;
+            height: 100dvh;
+
+            padding: 18px 12px 12px;
+
+            background: var(--eh-sidebar);
+            border-right: 1px solid var(--eh-border);
+
+            overflow-x: hidden;
+            overflow-y: auto;
+
+            scrollbar-width: thin;
+            scrollbar-color: #31505d transparent;
+        }
+
+        .eh-app-sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .eh-app-sidebar::-webkit-scrollbar-thumb {
+            background: #31505d;
+            border-radius: 10px;
+        }
+
+        /* BRAND */
+
+        .eh-app-brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+
+            padding: 5px 9px 22px;
+
+            color: #fff !important;
+            text-decoration: none !important;
+
+            font-size: 22px;
+            font-weight: 750;
+            letter-spacing: -.04em;
+
+            flex-shrink: 0;
+        }
+
+        .eh-brand-mark {
+            display: grid;
+            place-items: center;
+
+            width: 39px;
+            height: 39px;
+            flex-shrink: 0;
+
+            background: #078c84;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .eh-brand-mark svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* NAVIGATION */
+
+        .eh-app-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1 0 auto;
+        }
+
+        .eh-nav-section {
+            padding: 14px 11px 6px;
+
+            color: #7698a7;
+            font-size: 10px;
+            font-weight: 750;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+
+        .eh-nav-section:first-child {
+            padding-top: 3px;
+        }
+
+        .eh-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+
+            min-height: 39px;
+            padding: 9px 11px;
+
+            border: 1px solid transparent;
+            border-radius: 8px;
+
+            color: #aec8d2 !important;
+            text-decoration: none !important;
+
+            font-size: 13px;
+            font-weight: 550;
+
+            transition: background .18s, color .18s;
+        }
+
+        .eh-nav-item svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .eh-nav-item:hover {
+            color: #fff !important;
+            background: #123240;
+        }
+
+        .eh-nav-item.active {
+            color: #51ded2 !important;
+            background: #103e48;
+            border-color: #16545b;
+            font-weight: 700;
+        }
+
+        .eh-nav-divider {
+            height: 1px;
+            background: var(--eh-border);
+            margin: 10px 10px 5px;
+        }
+
+        .eh-nav-item:focus-visible,
+        .eh-signout:focus-visible,
+        .eh-menu-button:focus-visible {
+            outline: 2px solid #5ee5d9;
+            outline-offset: 2px;
+        }
+
+        /* ==========================================
+           ACCOUNT SECTION
+           ========================================== */
+
+        .eh-sidebar-footer {
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid var(--eh-border);
+            flex-shrink: 0;
+        }
+
+        .eh-user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            padding: 8px 5px 12px;
+            min-width: 0;
+        }
+
+        .eh-user-avatar {
+            display: grid;
+            place-items: center;
+
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+
+            background: #0e837e;
+            color: white;
+            border-radius: 50%;
+
+            font-size: 12px;
+            font-weight: 750;
+        }
+
+        .eh-user-info {
+            min-width: 0;
+        }
+
+        .eh-user-info strong {
+            display: block;
+            color: #edf7fa;
+            font-size: 11px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .eh-user-info span {
+            display: block;
+            color: #89a8b7;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+
+        .eh-signout {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 9px;
+
+            width: 100%;
+            min-height: 39px;
+
+            border: 1px solid #31505d;
+            border-radius: 8px;
+
+            background: transparent;
+            color: #b9d0d9;
+
+            font-size: 12px;
+            font-weight: 650;
+            cursor: pointer;
+        }
+
+        .eh-signout:hover {
+            background: #143340;
+            color: #fff;
+        }
+
+        .eh-signout svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        /* ==========================================
+           MAIN APPLICATION AREA
+           ========================================== */
+
+        .eh-main-column {
+            flex: 1 1 auto;
+
+            width: calc(100% - var(--eh-sidebar-width));
+            min-width: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+
+            margin-left: var(--eh-sidebar-width);
+            background: var(--eh-bg);
+        }
+
+        /* TOP BAR */
+
+        .eh-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            height: 68px;
+            padding: 0 28px;
+
+            background: #0b2432;
+            border-bottom: 1px solid var(--eh-border);
+        }
+
+        .eh-topbar-label {
+            color: #a7bfcb;
+            font-size: 12px;
+            font-weight: 650;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+
+        .eh-topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            color: #c6d9e0;
+            font-size: 12px;
+        }
+
+        .eh-topbar-avatar {
+            display: grid;
+            place-items: center;
+
+            width: 31px;
+            height: 31px;
+
+            border-radius: 50%;
+            background: #24495a;
+            color: white;
+
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* PAGE CONTENT */
+
+        .eh-main-content {
+            width: 100%;
+            max-width: none;
+            min-width: 0;
+
+            min-height: calc(100dvh - 68px);
+
+            padding: 28px 28px 45px;
+            margin: 0;
+
+            background: var(--eh-bg);
+            color: var(--eh-text);
+        }
+
+        /* ==========================================
+           DARK DASHBOARD STYLING
+           ========================================== */
+
+        .eh-main-content .eh-dashboard {
+            width: 100%;
+            max-width: none;
+            min-width: 0;
+        }
+
+        .eh-main-content .eh-dash-title,
+        .eh-main-content .eh-section-title {
+            color: #edf7fa;
+        }
+
+        .eh-main-content .eh-dash-subtitle,
+        .eh-main-content .eh-section-description {
+            color: #98b6c3;
+        }
+
+        .eh-main-content .eh-dash-date {
+            background: #102c3a;
+            border-color: var(--eh-border);
+            color: #b8d0d9;
+        }
+
+        /* STATS */
+
+        .eh-main-content .eh-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .eh-main-content .eh-stat-card {
+            min-width: 0;
+            padding: 19px;
+
+            background: #102b3a;
+            border: 1px solid var(--eh-border);
+            border-radius: 12px;
+            box-shadow: none;
+        }
+
+        .eh-main-content .eh-stat-card:hover {
+            background: #153343;
+            box-shadow: none;
+        }
+
+        .eh-main-content .eh-stat-number,
+        .eh-main-content .eh-person-name,
+        .eh-main-content .eh-host-name {
+            color: #eff8fa;
+        }
+
+        .eh-main-content .eh-stat-label,
+        .eh-main-content .eh-stat-caption,
+        .eh-main-content .eh-person-detail {
+            color: #9bb7c3;
+        }
+
+        /* VISITORS */
+
+        .eh-main-content .eh-section {
+            background: #102b3a;
+            border-color: var(--eh-border);
+            box-shadow: none;
+        }
+
+        .eh-main-content .eh-section-header {
+            border-color: var(--eh-border);
+        }
+
+        .eh-main-content .eh-table thead {
+            background: #0d2634;
+        }
+
+        .eh-main-content .eh-table th {
+            color: #9bb9c6;
+            border-color: var(--eh-border);
+        }
+
+        .eh-main-content .eh-table td {
+            color: #b7d0d9;
+            border-color: #254453;
+        }
+
+        .eh-main-content .eh-table tbody tr:hover {
+            background: #173748;
+        }
+
+        .eh-main-content .eh-empty-title {
+            color: #e8f3f7;
+        }
+
+        .eh-main-content .eh-empty-text {
+            color: #9db8c3;
+        }
+
+        .eh-main-content .eh-empty-icon {
+            background: #164b4c;
+            color: #5dd7c8;
+        }
+
+        .eh-main-content .eh-checkout-btn {
+            background: transparent;
+            color: #f4a8a8;
+            border-color: #83545d;
+        }
+
+        .eh-main-content .eh-checkout-btn:hover {
+            background: #402a34;
+        }
+
+        /* ==========================================
+           MOBILE NAVIGATION
+           ========================================== */
+
+        .eh-mobile-brand {
+            display: none;
+            color: white !important;
+            text-decoration: none !important;
+            font-size: 20px;
+            font-weight: 750;
+        }
+
+        .eh-menu-button {
+            display: none;
+            align-items: center;
+            justify-content: center;
+
+            border: 1px solid #31505d;
+            border-radius: 8px;
+
+            background: #132f3e;
+            color: white;
+
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .eh-menu-button svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .eh-scrim {
+            display: none;
+        }
+
+        /* ==========================================
+           RESPONSIVE RULES
+           ========================================== */
+
+        @@media (max-width: 1300px) {
+            .eh-main-content .eh-stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @@media (max-width: 1000px) {
+            .eh-main-content {
+                padding: 22px 20px 40px;
+            }
+
+            .eh-topbar {
+                padding: 0 20px;
+            }
+        }
+
+        @@media (max-width: 800px) {
+            .eh-app-sidebar {
+                width: min(270px, 85vw);
+                min-width: 0;
+                transform: translateX(-100%);
+                transition: transform .2s ease;
+                box-shadow: 12px 0 45px rgba(0,0,0,.3);
+            }
+
+            body.nav-open .eh-app-sidebar {
+                transform: translateX(0);
+            }
+
+            .eh-main-column {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .eh-topbar {
+                height: 64px;
+            }
+
+            .eh-topbar-label,
+            .eh-topbar-user {
+                display: none;
+            }
+
+            .eh-mobile-brand {
+                display: block;
+            }
+
+            .eh-menu-button {
+                display: inline-flex;
+            }
+
+            .eh-main-content {
+                min-height: calc(100dvh - 64px);
+                padding: 20px 15px 35px;
+            }
+
+            .eh-scrim {
+                position: fixed;
+                inset: 0;
+                z-index: 1040;
+                background: rgba(0,0,0,.6);
+            }
+
+            body.nav-open .eh-scrim {
+                display: block;
+            }
+        }
+
+        @@media (max-width: 550px) {
+            .eh-main-content .eh-stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .eh-main-content .eh-stat-card {
+                padding: 18px;
+            }
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .eh-app-sidebar,
+            .eh-nav-item,
+            .eh-stat-card {
+                transition: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="eh-app-body">
+
+    <div class="eh-app-shell">
+
+        <!-- SIDEBAR -->
+
+        <aside class="eh-app-sidebar"
+               id="sidebar"
+               aria-label="Main navigation">
+
+            <!-- BRAND -->
+
+            <a class="eh-app-brand"
+               asp-controller="Home"
+               asp-action="Index">
+
+                <span class="eh-brand-mark">
+                    <partial name="_BrandMark" />
+                </span>
+
+                EntryHub
+            </a>
+
+            <!-- MENU -->
+
+            <nav class="eh-app-nav">
+
+                @if (isAdmin)
+                {
+                    <div class="eh-nav-section">
+                        Overview
+                    </div>
+
+                    <a class="eh-nav-item @Active("Dashboard")"
+                       asp-controller="Dashboard"
+                       asp-action="Index">
+                        @Html.Icon("speedometer2")
+                        Dashboard
+                    </a>
+
+                    <a class="eh-nav-item @Active("Visits")"
+                       asp-controller="Visits"
+                       asp-action="Index">
+                        @Html.Icon("journal-text")
+                        Visitor Log
+                    </a>
+
+                    <div class="eh-nav-section">
+                        Management
+                    </div>
+
+                    <a class="eh-nav-item @Active("Hosts")"
+                       asp-controller="Hosts"
+                       asp-action="Index">
+                        @Html.Icon("people")
+                        Hosts
+                    </a>
+
+                    <a class="eh-nav-item @Active("Questions")"
+                       asp-controller="Questions"
+                       asp-action="Index">
+                        @Html.Icon("patch-question")
+                        Questions
+                    </a>
+
+                    <a class="eh-nav-item @Active("Devices")"
+                       asp-controller="Devices"
+                       asp-action="Index">
+                        @Html.Icon("tablet")
+                        Kiosk Devices
+                    </a>
+                }
+
+                @if (isHost)
+                {
+                    <div class="eh-nav-section">
+                        My Account
+                    </div>
+
+                    <a class="eh-nav-item @Active("HostPortal")"
+                       asp-controller="HostPortal"
+                       asp-action="Index">
+                        @Html.Icon("bell")
+                        My Notifications
+                    </a>
+                }
+
+                @if (isSignedIn)
+                {
+                    <div class="eh-nav-section">
+                        Kiosk Access
+                    </div>
+
+                    <a class="eh-nav-item @(isPairPage ? "active" : "")"
+                       asp-controller="Kiosk"
+                       asp-action="Pair">
+                        @Html.Icon("qr-code")
+                        Pair Device
+                    </a>
+
+                    <a class="eh-nav-item"
+                       asp-controller="Kiosk"
+                       asp-action="Index"
+                       target="_blank"
+                       rel="noopener">
+                        @Html.Icon("pc-display")
+                        Open Kiosk
+                    </a>
+
+                    <div class="eh-nav-divider"></div>
+
+                    <a class="eh-nav-item @(isPasswordPage ? "active" : "")"
+                       asp-controller="Account"
+                       asp-action="ChangePassword">
+                        @Html.Icon("shield-lock")
+                        Change Password
+                    </a>
+                }
+
+            </nav>
+
+            <!-- USER AND SIGN OUT -->
+
+            @if (isSignedIn)
+            {
+                <div class="eh-sidebar-footer">
+
+                    <div class="eh-user-profile">
+
+                        <span class="eh-user-avatar">
+                            @userName.Initials()
+                        </span>
+
+                        <div class="eh-user-info">
+                            <strong>@userName</strong>
+
+                            <span>
+                                @(isAdmin ? "Administrator" : "Host")
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <form asp-controller="Account"
+                          asp-action="Logout"
+                          method="post">
+
+                        <button class="eh-signout"
+                                type="submit">
+                            @Html.Icon("box-arrow-right")
+                            Sign Out
+                        </button>
+
+                    </form>
+
+                </div>
+            }
+
+        </aside>
+
+        <!-- MOBILE BACKDROP -->
+
+        <div class="eh-scrim" id="scrim"></div>
+
+        <!-- MAIN CONTENT AREA -->
+
+        <div class="eh-main-column">
+
+            <header class="eh-topbar">
+
+                <a class="eh-mobile-brand"
+                   asp-controller="Home"
+                   asp-action="Index">
+                    EntryHub
+                </a>
+
+                <div class="eh-topbar-label">
+                    Visitor Management Platform
+                </div>
+
+                @if (isSignedIn)
+                {
+                    <div class="eh-topbar-user">
+
+                        <span>
+                            @(isAdmin ? "Administrator" : "Host")
+                        </span>
+
+                        <span class="eh-topbar-avatar">
+                            @userName.Initials()
+                        </span>
+
+                    </div>
+                }
+
+                <button class="eh-menu-button"
+                        id="menuBtn"
+                        type="button"
+                        aria-label="Open navigation"
+                        aria-expanded="false"
+                        aria-controls="sidebar">
+
+                    @Html.Icon("list")
+
+                </button>
+
+            </header>
+
+            <main class="eh-main-content">
+
+                @if (TempData["Ok"] != null)
+                {
+                    <div class="alert alert-success mb-4"
+                         role="status">
+
+                        @Html.Icon("check2-circle")
+                        <span>@TempData["Ok"]</span>
+
+                    </div>
+                }
+
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger mb-4"
+                         role="alert">
+
+                        @Html.Icon("exclamation-triangle")
+                        <span>@TempData["Error"]</span>
+
+                    </div>
+                }
+
+                @RenderBody()
+
+            </main>
+
+        </div>
+
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <script src="~/lib/bootstrap/bootstrap.bundle.min.js"></script>
+
+    <script src="~/js/common.js"
+            asp-append-version="true"></script>
+
+    <script>
+        (() => {
+            const body = document.body;
+            const button = document.getElementById("menuBtn");
+            const scrim = document.getElementById("scrim");
+
+            if (!button || !scrim) return;
+
+            function closeMenu() {
+                body.classList.remove("nav-open");
+                button.setAttribute("aria-expanded", "false");
+            }
+
+            button?.addEventListener("click", () => {
+                const isOpen = body.classList.toggle("nav-open");
+                button.setAttribute("aria-expanded", String(isOpen));
+            });
+
+            scrim?.addEventListener("click", closeMenu);
+
+            document.addEventListener("keydown", e => {
+                if (e.key === "Escape") closeMenu();
+            });
+        })();
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>
