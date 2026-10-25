@@ -1,0 +1,203 @@
+﻿@{
+    ViewData["Title"] = "Pair device";
+}
+<div class="page-head">
+
+    <div>
+        <h1>Pair this device</h1>
+        <p>Turn this browser into a check-in kiosk by scanning a pairing QR code or typing a 6-digit code.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-link" asp-action="Add">Create a code or QR for another device &rarr;</a>
+    </div>
+</div>
+@if (TempData["Paired"] is string okMsg)
+{
+    <div class="alert alert-success d-flex align-items-center gap-3">
+        <span>&#10003; @okMsg</span>
+        <a class="btn btn-sm btn-success ms-auto" href="/Kiosk" target="_blank" rel="noopener">Open kiosk</a>
+    </div>
+}
+@if (TempData["PairError"] is string errMsg)
+{
+    <div class="alert alert-danger">@errMsg</div>
+}
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">@string.Join(" ", ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(x => x.ErrorMessage))</div>
+}
+<div class="method-grid">
+
+    <!-- SCAN -->
+    <div class="card">
+        <div class="card-body method">
+            <div class="method-head"><span class="method-ico">@Html.Icon("qr-code")</span><h3>Scan QR with camera</h3><span class="letters">Camera</span></div>
+            <p class="desc">EntryHub uses the camera only to read the QR code. Nothing is recorded or saved.</p>
+
+            <div id="camAsk" class="pair-state">
+                <button type="button" id="camStart" class="btn btn-primary">Turn on camera</button>
+            </div>
+
+            <div id="camLive" class="pair-state d-none">
+                <div class="pair-scan" id="scanBox">
+                    <video id="scanVideo" playsinline muted></video>
+                    <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+                </div>
+                <p id="scanMsg" class="pair-msg">Point the camera at the QR code.</p>
+                <button type="button" id="camStop" class="btn btn-outline-secondary">Stop camera</button>
+            </div>
+
+            <div id="camErr" class="pair-state d-none">
+                <div class="pair-alert">
+                    <b id="camErrTitle">Camera unavailable</b>
+                    <span id="camErrText"></span>
+                    <ol id="camErrSteps" class="d-none">
+                        <li>Click the <b>lock</b> icon in the address bar.</li>
+                        <li>Set <b>Camera</b> to <b>Allow</b>.</li>
+                        <li>Reload this page and click <b>Turn on camera</b>.</li>
+                    </ol>
+                </div>
+                <button type="button" id="camRetry" class="btn btn-primary">Try again</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CODE -->
+    <div class="card">
+        <div class="card-body method">
+            <div class="method-head"><span class="method-ico ok">@Html.Icon("tablet")</span><h3>Enter 6-digit code</h3><span class="letters">Code</span></div>
+            <p class="desc">Get a code from <b>Kiosk devices &rarr; Add device</b>, then type it here.</p>
+            <form id="codeForm" asp-action="Pair" method="post" novalidate>
+                <div class="mb-3">
+                    <label class="form-label" for="codeInput">Pairing code</label>
+                    <input id="codeInput" name="code" class="form-control pair-code" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000" />
+                </div>
+                <button type="submit" id="pairBtn" class="btn btn-primary">Pair device</button>
+                <div id="pairStatus" class="mt-3" role="status" aria-live="polite"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- THIS DEVICE -->
+    <div class="card wide">
+        <div class="card-body method">
+            <div class="method-head"><span class="method-ico ink">@Html.Icon("pc-display")</span><h3>Use this device now</h3><span class="letters">Quick</span></div>
+            <p class="desc">Already on the device that should become the kiosk? One click switches it to kiosk mode.</p>
+            <form asp-action="ThisDevice" method="post" class="row g-3 align-items-end">
+                <div class="col-md-8"><label class="form-label">Device name</label><input name="deviceName" class="form-control" placeholder="Front desk iPad" required /></div>
+                <div class="col-md-4"><button class="btn btn-success w-100">Make this device a kiosk</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/jsqr/jsQR.js"></script>
+    <script>
+        (function () {
+            var form = document.getElementById('codeForm');
+            if (!form) return;
+            var btn = document.getElementById('pairBtn'), out = document.getElementById('pairStatus');
+
+            function say(ok, text) {
+                out.innerHTML = '';
+                var d = document.createElement('div');
+                d.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger') + ' mb-0';
+                d.textContent = text;
+                if (ok) {
+                    var a = document.createElement('a');
+                    a.href = '/Kiosk'; a.target = '_blank'; a.rel = 'noopener';
+                    a.className = 'btn btn-sm btn-success ms-2'; a.textContent = 'Open kiosk';
+                    d.appendChild(a);
+                }
+                out.appendChild(d);
+            }
+
+            form.addEventListener('submit', async function (ev) {
+                ev.preventDefault();
+                var input = form.querySelector('[name=code]');
+                var code = input.value.trim();
+                if (!/^[0-9]{6}$/.test(code)) { say(false, 'Enter the 6-digit code.'); return; }
+                btn.disabled = true; btn.textContent = 'Pairing\u2026'; out.textContent = '';
+                try {
+                    var res = await fetch('@Url.Action("PairCode", "Devices")', { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
+                    if (!res.ok) throw new Error('server returned ' + res.status);
+                    var j = await res.json();
+                    say(j.ok, j.message);
+                    if (j.ok) input.value = '';
+                } catch (e) { say(false, 'Could not pair: ' + e.message); }
+                btn.disabled = false; btn.textContent = 'Pair device';
+            });
+        })();
+    </script>
+    <script>
+        (function() {
+            var $ = function(id) { return document.getElementById(id); };
+            var stream = null, timer = null;
+
+            function show(s) {
+                ['Ask', 'Live', 'Err'].forEach(function(n) { $('cam' + n).classList.toggle('d-none', n.toLowerCase() !== s); });
+            }
+            function stop() {
+                clearInterval(timer); timer = null;
+                if (stream) { stream.getTracks().forEach(function(t) { t.stop(); }); stream = null; }
+            }
+            function fail(title, text, steps) {
+                stop(); show('err');
+                $('camErrTitle').textContent = title; $('camErrText').textContent = text;
+                $('camErrSteps').classList.toggle('d-none', !steps);
+            }
+            function explain(e) {
+                var n = e && e.name;
+                if (n === 'NotAllowedError' || n === 'PermissionDeniedError' || n === 'SecurityError')
+                    return fail('Camera access is blocked', 'Allow the camera for this site, then try again.', true);
+                if (n === 'NotFoundError' || n === 'DevicesNotFoundError')
+                    return fail('No camera found', 'This device has no usable camera. Use the 6-digit code instead.', false);
+                if (n === 'NotReadableError' || n === 'TrackStartError')
+                    return fail('Camera is busy', 'Another app or tab is using the camera. Close it and try again.', false);
+                return fail('Camera could not start', 'Try again, or use the 6-digit code instead.', false);
+            }
+            function done() { clearInterval(timer); $('scanBox').classList.add('ok'); $('scanMsg').textContent = '\u2713 QR code read. Pairing\u2026'; }
+
+          async function start() {
+          if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+            return fail('Secure address needed', 'The camera only works on https:// (or localhost). Open the https link, or use the code.', false);
+          try { var p = await navigator.permissions.query({ name: 'camera' }); if (p.state === 'denied') return explain({ name: 'NotAllowedError' }); } catch (e) {}
+          try {
+            try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
+            catch (e) { if (e.name === 'OverconstrainedError') stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); else throw e; }
+            var v = $('scanVideo'); v.srcObject = stream; await v.play();
+            $('scanBox').classList.remove('ok'); $('scanMsg').textContent = 'Point the camera at the QR code.';
+            show('live');
+
+            var det = ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+            var cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+            timer = setInterval(async function () {
+              try {
+                var val = null;
+                if (det) {
+                  var codes = await det.detect(v); if (codes.length) val = codes[0].rawValue;
+                } else if (window.jsQR && v.videoWidth) {
+                  var w = 480, h = Math.round(w * v.videoHeight / v.videoWidth);
+                  cv.width = w; cv.height = h; cx.drawImage(v, 0, 0, w, h);
+                  var r = jsQR(cx.getImageData(0, 0, w, h).data, w, h);
+                  if (r) val = r.data;
+                }
+                if (!val) return;
+                val = val.trim();
+                if (/^\d{6}$/.test(val)) { done(); document.querySelector('#codeForm input').value = val; $('codeForm').submit(); }
+                        else {
+          var u = new URL(val), t = u.searchParams.get('token');
+          if (u.pathname.toLowerCase().indexOf('/kiosk/enroll') === 0 && t) { done(); $('linkToken').value = t; $('linkForm').submit(); }
+        }
+              } catch (e) {}
+            }, 250);
+          } catch (e) { explain(e); }
+        }
+
+            $('camStart').onclick = start; $('camRetry').onclick = start;
+            $('camStop').onclick = function() { stop(); show('ask'); };
+            window.addEventListener('pagehide', stop);
+        })();
+    </script>
+}

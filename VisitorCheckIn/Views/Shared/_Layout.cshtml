@@ -1,7 +1,12 @@
 
 @{
+
     var ctrl = (ViewContext.RouteData.Values["controller"] as string) ?? "";
-    var action = (ViewContext.RouteData.Values["action"] as string) ?? "";
+    var act = (ViewContext.RouteData.Values["action"] as string) ?? "";
+    var action = act;
+
+    string IsOn(string c, string a) => string.Equals(ctrl, c, StringComparison.OrdinalIgnoreCase) && string.Equals(act, a, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    string IsOnExcept(string c, string a) => string.Equals(ctrl, c, StringComparison.OrdinalIgnoreCase) && !string.Equals(act, a, StringComparison.OrdinalIgnoreCase) ? "active" : "";
 
     string Active(string controller) =>
         string.Equals(ctrl, controller, StringComparison.OrdinalIgnoreCase)
@@ -729,7 +734,7 @@
                         Questions
                     </a>
 
-                    <a class="eh-nav-item @Active("Devices")"
+                    <a class="eh-nav-item @IsOnExcept("Devices", "Pair")"
                        asp-controller="Devices"
                        asp-action="Index">
                         @Html.Icon("tablet")
@@ -757,9 +762,7 @@
                         Kiosk Access
                     </div>
 
-                    <a class="eh-nav-item @(isPairPage ? "active" : "")"
-                       asp-controller="Kiosk"
-                       asp-action="Pair">
+                    <a class="nav-link-x @IsOn("Devices", "Pair")" asp-controller="Devices" asp-action="Pair">
                         @Html.Icon("qr-code")
                         Pair Device
                     </a>

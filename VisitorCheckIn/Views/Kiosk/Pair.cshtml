@@ -1,12 +1,139 @@
 @{ Layout = "_KioskLayout"; ViewData["Title"] = "Pair this device"; }
-<div class="k-wrap"><div class="k-card k-narrow">
-  <div class="k-logo"><partial name="_BrandMark" /></div>
-  <h1>Pair this device</h1>
-  <p class="k-sub">Ask an admin for a 6-digit code. In the admin portal: Kiosk devices → Add device.</p>
-  <div class="k-error">@Html.ValidationSummary(true)</div>
-  <form method="post">
-    <input name="code" class="k-input k-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" autofocus placeholder="000000" aria-label="6-digit pairing code" />
-    <button class="k-btn k-primary k-block">Pair device</button>
-  </form>
-  <p class="k-hint">Already have a QR code or setup link? Scan or open it on this device instead.</p>
-</div></div>
+
+        <div class="k-wrap">
+            <div class="k-card k-narrow">
+                <div class="k-logo"><partial name="_BrandMark" /></div>
+                <h1>Pair this device</h1>
+                <p class="k-sub">Link this screen to EntryHub as a check-in kiosk.</p>
+                <div class="k-error">@Html.ValidationSummary(true)</div>
+
+                <div class="k-seg" role="tablist">
+                    <button type="button" id="tabScan" class="on" role="tab" aria-selected="true">📷 Scan QR</button>
+                    <button type="button" id="tabCode" role="tab" aria-selected="false">⌨ Enter code</button>
+                </div>
+
+                <!-- SCAN -->
+                <section id="paneScan">
+                    <div id="camAsk" class="k-perm">
+                        <div class="k-perm-ico">📷</div>
+                        <b>Allow camera access</b>
+                        <p>EntryHub uses the camera only to read the pairing QR code. Nothing is recorded or saved.</p>
+                        <button type="button" id="camStart" class="k-btn k-primary k-block">Turn on camera</button>
+                    </div>
+
+                    <div id="camLive" class="k-hidden">
+                        <div class="k-scan" id="scanBox">
+                            <video id="scanVideo" playsinline muted></video>
+                            <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+                        </div>
+                        <p id="scanMsg" class="k-hint">Point the camera at the QR code on the admin screen.</p>
+                        <button type="button" id="camStop" class="k-btn k-ghost k-block">Stop camera</button>
+                    </div>
+
+                    <div id="camErr" class="k-perm bad k-hidden">
+                        <div class="k-perm-ico">🚫</div>
+                        <b id="camErrTitle">Camera unavailable</b>
+                        <p id="camErrText"></p>
+                        <ol id="camErrSteps" class="k-steps k-hidden">
+                            <li>Tap the <b>lock</b> or <b>camera</b> icon in the address bar.</li>
+                            <li>Set <b>Camera</b> to <b>Allow</b>.</li>
+                            <li>Reload this page, then tap <b>Turn on camera</b>.</li>
+                        </ol>
+                        <button type="button" id="camRetry" class="k-btn k-primary k-block">Try again</button>
+                        <button type="button" id="camToCode" class="k-btn k-ghost k-block">Enter the code instead</button>
+                    </div>
+                </section>
+
+                <!-- CODE -->
+                <section id="paneCode" class="k-hidden">
+                    <form method="post">
+                        <input name="code" class="k-input k-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="000000" aria-label="6-digit pairing code" />
+                        <button class="k-btn k-primary k-block">Pair device</button>
+                    </form>
+                    <p class="k-hint">Get the code in the admin portal: Kiosk devices → Add device.</p>
+                </section>
+            </div>
+        </div>
+        <script src="~/lib/jsqr/jsQR.js"></script>
+
+        <script>
+                    (function () {
+                      var $ = function (id) { return document.getElementById(id); };
+                      var stream = null, timer = null;
+
+                      function pane(which) {
+                        var scan = which === 'scan';
+                        $('paneScan').classList.toggle('k-hidden', !scan);
+                        $('paneCode').classList.toggle('k-hidden', scan);
+                        $('tabScan').classList.toggle('on', scan); $('tabCode').classList.toggle('on', !scan);
+                        $('tabScan').setAttribute('aria-selected', scan); $('tabCode').setAttribute('aria-selected', !scan);
+                        if (!scan) { stop(); $('paneCode').querySelector('input').focus(); } else showState('ask');
+                      }
+                      function showState(s) {
+                        $('camAsk').classList.toggle('k-hidden', s !== 'ask');
+                        $('camLive').classList.toggle('k-hidden', s !== 'live');
+                        $('camErr').classList.toggle('k-hidden', s !== 'err');
+                      }
+                      function stop() {
+                        clearInterval(timer); timer = null;
+                        if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+                      }
+                      function fail(title, text, showSteps) {
+                        stop(); showState('err');
+                        $('camErrTitle').textContent = title; $('camErrText').textContent = text;
+                        $('camErrSteps').classList.toggle('k-hidden', !showSteps);
+                      }
+                      function explain(e) {
+                        var n = e && e.name;
+                        if (n === 'NotAllowedError' || n === 'PermissionDeniedError' || n === 'SecurityError')
+                          return fail('Camera access is blocked', 'Please allow the camera for this site, then try again.', true);
+                        if (n === 'NotFoundError' || n === 'DevicesNotFoundError')
+                          return fail('No camera found', 'This device has no camera we can use. Enter the 6-digit code instead.', false);
+                        if (n === 'NotReadableError' || n === 'TrackStartError')
+                          return fail('Camera is busy', 'Another app or tab is using the camera. Close it and try again.', false);
+                        return fail('Camera could not start', 'Try again, or enter the 6-digit code instead.', false);
+                      }
+
+async function start() {
+  if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+    return fail('Secure address needed', 'The camera only works on https:// (or localhost). Open the https link, or use the code.', false);
+  try { var p = await navigator.permissions.query({ name: 'camera' }); if (p.state === 'denied') return explain({ name: 'NotAllowedError' }); } catch (e) {}
+  try {
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
+    catch (e) { if (e.name === 'OverconstrainedError') stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); else throw e; }
+    var v = $('scanVideo'); v.srcObject = stream; await v.play();
+    $('scanBox').classList.remove('ok'); $('scanMsg').textContent = 'Point the camera at the QR code.';
+    show('live');
+
+    var det = ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+    var cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    timer = setInterval(async function () {
+      try {
+        var val = null;
+        if (det) {
+          var codes = await det.detect(v); if (codes.length) val = codes[0].rawValue;
+        } else if (window.jsQR && v.videoWidth) {
+          var w = 480, h = Math.round(w * v.videoHeight / v.videoWidth);
+          cv.width = w; cv.height = h; cx.drawImage(v, 0, 0, w, h);
+          var r = jsQR(cx.getImageData(0, 0, w, h).data, w, h);
+          if (r) val = r.data;
+        }
+        if (!val) return;
+        val = val.trim();
+        if (/^\d{6}$/.test(val)) { done(); $('paneCode').querySelector('input').value = val; $('paneCode').querySelector('form').submit(); }
+        else { var u = new URL(val); if (u.pathname.toLowerCase().indexOf('/kiosk/enroll') === 0) { done(); location.href = val; } }
+      } catch (e) {}
+    }, 250);
+  } catch (e) { explain(e); }
+}
+                      function done() { clearInterval(timer); $('scanBox').classList.add('ok'); $('scanMsg').textContent = '✓ QR code read. Pairing…'; }
+
+                      $('tabScan').onclick = function () { pane('scan'); };
+                      $('tabCode').onclick = function () { pane('code'); };
+                      $('camStart').onclick = start; $('camRetry').onclick = start;
+                      $('camStop').onclick = function () { stop(); showState('ask'); };
+                      $('camToCode').onclick = function () { pane('code'); };
+                      window.addEventListener('pagehide', stop);
+                      if (@(ViewData.ModelState.ErrorCount > 0 ? "true" : "false")) pane('code');   // after a wrong code, show the code tab
+                    })();
+        </script>

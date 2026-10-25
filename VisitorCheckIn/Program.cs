@@ -78,6 +78,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 app.UseHttpsRedirection();
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()";
+    await next();
+});
 app.UseStaticFiles();
 app.UseRouting();
 app.UseRateLimiter();

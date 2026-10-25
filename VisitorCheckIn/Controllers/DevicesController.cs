@@ -30,6 +30,63 @@ public class DevicesController : Controller
     }
 
     public IActionResult Add() => View();
+    [HttpGet] public IActionResult Pair() => View();
+
+    [HttpPost]
+    [HttpPost]
+    public async Task<IActionResult> Pair(string code)
+    {
+        code = code?.Trim();
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            TempData["Error"] = "Please enter the 6-digit code.";
+            return RedirectToAction(nameof(Pair));
+        }
+
+        var e = await _kiosk.FindByCodeAsync(code);
+        if (e == null)
+        {
+            TempData["Error"] = "Invalid or expired code. Generate a new one in Kiosk Devices \u2192 Add device.";
+            return RedirectToAction(nameof(Pair));
+        }
+
+        var raw = await _kiosk.RedeemAsync(e, "Code", null, Request.Headers.UserAgent.ToString());
+        _kiosk.IssueCookie(HttpContext, raw);
+        TempData["Ok"] = $"This browser is now paired as \u201c{e.DeviceName}\u201d. Click Open Kiosk to start.";
+        return RedirectToAction(nameof(Pair));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> PairLink(string token)
+    {
+        var e = await _kiosk.FindByLinkAsync(token);
+        if (e == null)
+        {
+            TempData["Error"] = "This setup link is invalid, expired or already used.";
+            return RedirectToAction(nameof(Pair));
+        }
+
+        var name = e.MaxUses > 1 ? $"{e.DeviceName} #{e.UseCount + 1}" : e.DeviceName;
+        var raw = await _kiosk.RedeemAsync(e, e.MaxUses > 1 ? "Bulk" : "Link", name, Request.Headers.UserAgent.ToString());
+        _kiosk.IssueCookie(HttpContext, raw);
+        TempData["Ok"] = $"This browser is now paired as \u201c{name}\u201d. Click Open Kiosk to start.";
+        return RedirectToAction(nameof(Pair));
+    }
+    [HttpPost]
+    public async Task<IActionResult> PairCode(string code)
+    {
+        code = code?.Trim();
+        if (string.IsNullOrWhiteSpace(code))
+            return Json(new { ok = false, message = "Please enter the 6-digit code." });
+
+        var e = await _kiosk.FindByCodeAsync(code);
+        if (e == null)
+            return Json(new { ok = false, message = "Invalid or expired code. Generate a new one in Kiosk Devices \u2192 Add device." });
+
+        var raw = await _kiosk.RedeemAsync(e, "Code", null, Request.Headers.UserAgent.ToString());
+        _kiosk.IssueCookie(HttpContext, raw);
+        return Json(new { ok = true, message = $"Paired as \u201c{e.DeviceName}\u201d. This browser is now a kiosk." });
+    }
     public IActionResult Guide() => View();
 
     /// <summary>Methods A, B, C (single device: code + QR + link) and E (bulk / MDM link: maxUses &gt; 1).</summary>

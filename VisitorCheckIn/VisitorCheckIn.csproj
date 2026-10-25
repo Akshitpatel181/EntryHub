@@ -16,4 +16,7 @@
     <PackageReference Include="WebPush" Version="1.0.12" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="wwwroot\lib\jsqr\" />
+  </ItemGroup>
 </Project>

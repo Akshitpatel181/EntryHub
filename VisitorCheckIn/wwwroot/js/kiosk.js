@@ -165,6 +165,7 @@
 
   // ---- 3b. Photo (mandatory) ----
   var camStream = null;
+
   function stopCam() {
     if (camStream) { camStream.getTracks().forEach(function (t) { t.stop(); }); camStream = null; }
   }
@@ -176,7 +177,16 @@
     c.getContext('2d').drawImage(source, 0, 0, c.width, c.height);
     return c.toDataURL('image/jpeg', 0.82);
   }
-
+  function camMessage(e) {
+  var n = e && e.name;
+  if (n === 'NotAllowedError' || n === 'PermissionDeniedError' || n === 'SecurityError')
+    return 'Camera access is blocked. Tap the lock icon in the address bar, set Camera to Allow, reload, then tap Try camera again.';
+  if (n === 'NotReadableError' || n === 'TrackStartError')
+    return 'The camera is being used by another app. Close it, then tap Try camera again.';
+  if (n === 'NotFoundError' || n === 'DevicesNotFoundError')
+    return 'No camera was found. Tap \u201cUse camera app\u201d or ask reception for help.';
+  return 'The camera could not start. Tap Try camera again, or use the camera app.';
+}
   function photo() {
     var required = cfg.requirePhoto !== false, nextBtn = null, counting = false;
     var video = el('video', { class: 'k-video', autoplay: '', playsinline: '' });
@@ -209,9 +219,13 @@
 
     async function startCam() {
       stopCam(); showError('');
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
-        return fail('This screen cannot open the camera from here (the camera needs a secure https address). Tap \u201cUse camera app\u201d.');
-      msg.textContent = 'Starting camera\u2026'; stage.className = 'k-stage wait';
+      // replace the first "if (!navigator.mediaDevices ...)" line with:
+if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+  return fail('The camera needs a secure https address. Tap \u201cUse camera app\u201d.');
+
+// replace the whole catch block with:
+} catch (e) { fail(camMessage(e)); }
+      msg.textContent = 'Starting camera\u2026 tap Allow if asked.'; stage.className = 'k-stage wait';
       try {
         camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false });
         video.srcObject = camStream; await video.play();
