@@ -1,38 +1,231 @@
-@{ ViewData["Title"] = "Add kiosk device"; }
-<div class="page-head"><div><h1>Add a kiosk device</h1><p>Works with any phone, tablet, laptop or PC that has a modern browser. Pick the method that suits the device.</p></div>
-  <div class="page-actions"><a class="btn btn-link" asp-action="Index">&larr; Back to devices</a></div></div>
+@{
+    ViewData["Title"] = "Add kiosk device";
+}
+
+<div class="page-head">
+    <div>
+        <h1>Add a kiosk device</h1>
+        <p>
+            Works with any phone, tablet, laptop or PC that has
+            a modern browser. Pick the method that suits the device.
+        </p>
+    </div>
+
+    <div class="page-actions">
+        <a class="btn btn-link" asp-action="Index">
+            &larr; Back to devices
+        </a>
+    </div>
+</div>
 
 <div class="method-grid">
-  <div class="card"><div class="card-body method">
-    <div class="method-head"><span class="method-ico">@Html.Icon("qr-code")</span><h3>Code, QR or link</h3><span class="letters">A · B · C</span></div>
-    <p class="desc">Creates a one-time 6-digit code, a QR code and a setup link together. Type the code on <code>/Kiosk/Pair</code>, scan the QR with the device camera, or send the link by WhatsApp or email.</p>
-    <form asp-action="Enroll" method="post">
-      <input type="hidden" name="maxUses" value="1" />
-      <div class="mb-3"><label class="form-label">Device name</label><input name="deviceName" class="form-control" placeholder="Front desk iPad" required /></div>
-      <div class="mb-3"><label class="form-label">Valid for</label>
-        <select name="minutes" class="form-select"><option value="15">15 minutes</option><option value="60">1 hour</option><option value="1440">24 hours</option></select></div>
-      <button class="btn btn-primary">Generate code, QR and link</button>
-    </form>
-  </div></div>
 
-  <div class="card"><div class="card-body method">
-    <div class="method-head"><span class="method-ico ok">@Html.Icon("pc-display")</span><h3>Use this device now</h3><span class="letters">D</span></div>
-    <p class="desc">Already on the device that should become the kiosk? One click and it switches to kiosk mode. You can still reach the admin portal by typing its address (for example <code>/Dashboard</code>) or by using another browser.</p>
-    <form asp-action="ThisDevice" method="post">
-      <div class="mb-3"><label class="form-label">Device name</label><input name="deviceName" class="form-control" placeholder="My laptop" required /></div>
-      <button class="btn btn-success">Make this device a kiosk</button>
-    </form>
-  </div></div>
+    <!-- METHOD A, B, C: CODE / QR / LINK -->
 
-  <div class="card wide"><div class="card-body method">
-    <div class="method-head"><span class="method-ico ink">@Html.Icon("link-45deg")</span><h3>Bulk / MDM enrolment link</h3><span class="letters">E</span></div>
-    <p class="desc">One reusable link for many devices (Intune, Jamf, Android Enterprise, Fully Kiosk “Start URL”, Chromebook kiosk app URL). Each device that opens the link and taps “Set up” gets its own revocable token. Set a device limit and an expiry.</p>
-    <form asp-action="Enroll" method="post" class="row g-3 align-items-end">
-      <div class="col-md-4"><label class="form-label">Name prefix</label><input name="deviceName" class="form-control" placeholder="Reception iPad" required /></div>
-      <div class="col-md-3"><label class="form-label">Max devices</label><input name="maxUses" type="number" min="2" max="500" value="10" class="form-control" /></div>
-      <div class="col-md-3"><label class="form-label">Valid for</label>
-        <select name="minutes" class="form-select"><option value="1440">1 day</option><option value="10080">7 days</option><option value="20160">14 days</option></select></div>
-      <div class="col-md-2"><button class="btn btn-dark w-100">Create link</button></div>
-    </form>
-  </div></div>
+    <div class="card">
+        <div class="card-body method">
+
+            <div class="method-head">
+                <span class="method-ico">
+                    @Html.Icon("qr-code")
+                </span>
+                <h3>Code, QR or link</h3>
+                <span class="letters">A · B · C</span>
+            </div>
+
+            <p class="desc">
+                Creates a 6-digit code, a QR code and a setup link
+                together. Type the code on
+                <code>/Kiosk/Pair</code>, scan the QR with the
+                device camera, or send the link by WhatsApp or email.
+            </p>
+
+            <form asp-controller="Devices"
+                  asp-action="Enroll"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <input type="hidden"
+                       name="maxUses"
+                       value="1" />
+
+                <div class="mb-3">
+                    <label for="singleDeviceName"
+                           class="form-label">
+                        Device name
+                    </label>
+
+                    <input id="singleDeviceName"
+                           name="deviceName"
+                           class="form-control"
+                           placeholder="Front desk iPad"
+                           minlength="2"
+                           maxlength="100"
+                           required />
+                </div>
+
+                <div class="mb-3">
+                    <label for="singleMinutes"
+                           class="form-label">
+                        Valid for
+                    </label>
+
+                    <select id="singleMinutes"
+                            name="minutes"
+                            class="form-select">
+                        <option value="15">15 minutes</option>
+                        <option value="60">1 hour</option>
+                        <option value="1440">24 hours</option>
+                    </select>
+                </div>
+
+                <button type="submit"
+                        class="btn btn-primary">
+                    Generate code, QR and link
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- METHOD D: USE THIS DEVICE -->
+
+    <div class="card">
+        <div class="card-body method">
+
+            <div class="method-head">
+                <span class="method-ico ok">
+                    @Html.Icon("pc-display")
+                </span>
+                <h3>Use this device now</h3>
+                <span class="letters">D</span>
+            </div>
+
+            <p class="desc">
+                Already on the device that should become the kiosk?
+                One click and it switches to kiosk mode. You can
+                still reach the admin portal by typing its address
+                (for example <code>/Dashboard</code>) or using
+                another browser.
+            </p>
+
+            <form asp-controller="Devices"
+                  asp-action="ThisDevice"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label for="currentDeviceName"
+                           class="form-label">
+                        Device name
+                    </label>
+
+                    <input id="currentDeviceName"
+                           name="deviceName"
+                           class="form-control"
+                           placeholder="My laptop"
+                           minlength="2"
+                           maxlength="100"
+                           required />
+                </div>
+
+                <button type="submit"
+                        class="btn btn-success">
+                    Make this device a kiosk
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- METHOD E: BULK / MDM -->
+
+    <div class="card wide">
+        <div class="card-body method">
+
+            <div class="method-head">
+                <span class="method-ico ink">
+                    @Html.Icon("link-45deg")
+                </span>
+                <h3>Bulk / MDM enrolment link</h3>
+                <span class="letters">E</span>
+            </div>
+
+            <p class="desc">
+                One reusable link for many devices (Intune, Jamf,
+                Android Enterprise, Fully Kiosk, Chromebook kiosk
+                apps). Each device that opens the link and taps
+                "Set up" gets its own revocable token.
+                Set a device limit and an expiry.
+            </p>
+
+            <form asp-controller="Devices"
+                  asp-action="Enroll"
+                  method="post"
+                  class="row g-3 align-items-end">
+
+                @Html.AntiForgeryToken()
+
+                <div class="col-md-4">
+                    <label for="bulkDeviceName"
+                           class="form-label">
+                        Name prefix
+                    </label>
+
+                    <input id="bulkDeviceName"
+                           name="deviceName"
+                           class="form-control"
+                           placeholder="Reception iPad"
+                           minlength="2"
+                           maxlength="95"
+                           required />
+                </div>
+
+                <div class="col-md-3">
+                    <label for="bulkMaxUses"
+                           class="form-label">
+                        Max devices
+                    </label>
+
+                    <input id="bulkMaxUses"
+                           name="maxUses"
+                           type="number"
+                           min="2"
+                           max="500"
+                           value="10"
+                           class="form-control"
+                           required />
+                </div>
+
+                <div class="col-md-3">
+                    <label for="bulkMinutes"
+                           class="form-label">
+                        Valid for
+                    </label>
+
+                    <select id="bulkMinutes"
+                            name="minutes"
+                            class="form-select">
+                        <option value="1440">1 day</option>
+                        <option value="10080">7 days</option>
+                        <option value="20160">14 days</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <button type="submit"
+                            class="btn btn-dark w-100">
+                        Create link
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
 </div>

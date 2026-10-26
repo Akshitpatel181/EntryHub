@@ -10,8 +10,11 @@ using VisitorCheckIn.ViewModels;
 
 namespace VisitorCheckIn.Controllers;
 
+
 [Authorize(Roles = "Admin")]
+[AutoValidateAntiforgeryToken]
 public class DevicesController : Controller
+
 {
     private readonly AppDbContext _db;
     private readonly KioskService _kiosk;
