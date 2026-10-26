@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using VisitorCheckIn.Data;
 using VisitorCheckIn.ViewModels;
 
 namespace VisitorCheckIn.Controllers;
@@ -10,13 +12,16 @@ public class AccountController : Controller
 {
     private readonly SignInManager<IdentityUser> _signIn;
     private readonly UserManager<IdentityUser> _userManager;
+    private readonly AppDbContext _db;
 
     public AccountController(
         SignInManager<IdentityUser> signIn,
-        UserManager<IdentityUser> userManager)
+        UserManager<IdentityUser> userManager,
+        AppDbContext db)
     {
         _signIn = signIn;
         _userManager = userManager;
+        _db = db;
     }
 
     // ============================================
@@ -46,9 +51,53 @@ public class AccountController : Controller
         ViewBag.ReturnUrl = returnUrl;
 
         if (!ModelState.IsValid)
+        {
             return View(vm);
+        }
 
-        var email = vm.Email.Trim();
+        var email = vm.Email?.Trim() ?? "";
+
+        // ----------------------------------------
+        // CHECK ACCOUNT STATUS
+        // ----------------------------------------
+
+        var loginUser =
+            await _userManager.FindByNameAsync(email);
+
+        if (loginUser != null)
+        {
+            var isAdmin =
+                await _userManager.IsInRoleAsync(
+                    loginUser, "Admin");
+
+            var isHost =
+                await _userManager.IsInRoleAsync(
+                    loginUser, "Host");
+
+            // Do not allow inactive or unlinked
+            // Host accounts to access EntryHub.
+            if (isHost && !isAdmin)
+            {
+                var activeHost = await _db.Hosts
+                    .AsNoTracking()
+                    .AnyAsync(h =>
+                        h.UserId == loginUser.Id &&
+                        h.IsActive);
+
+                if (!activeHost)
+                {
+                    ModelState.AddModelError(
+                        "",
+                        "Invalid email or password.");
+
+                    return View(vm);
+                }
+            }
+        }
+
+        // ----------------------------------------
+        // SIGN IN WITH ASP.NET IDENTITY
+        // ----------------------------------------
 
         var result = await _signIn.PasswordSignInAsync(
             email,
@@ -58,42 +107,61 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
-            // Preserve valid return URLs, such as a
-            // page the user originally tried to access.
-            if (!string.IsNullOrEmpty(returnUrl) &&
+            var user = loginUser ??
+                await _userManager.FindByNameAsync(email);
+
+            // ------------------------------------
+            // DETERMINE USER ROLE
+            // ------------------------------------
+
+            var isAdmin = user != null &&
+                await _userManager.IsInRoleAsync(
+                    user, "Admin");
+
+            var isHost = user != null &&
+                await _userManager.IsInRoleAsync(
+                    user, "Host");
+
+            // ------------------------------------
+            // PRESERVE LOCAL RETURN URL
+            // ------------------------------------
+
+            if (!string.IsNullOrWhiteSpace(returnUrl) &&
                 Url.IsLocalUrl(returnUrl))
             {
-                return Redirect(returnUrl);
+                return LocalRedirect(returnUrl);
             }
 
-            // Automatically direct hosts to their portal.
-            if (User.Identity?.IsAuthenticated == true)
-            {
-                // The authentication principal may not
-                // be refreshed on this same request,
-                // so role lookup below uses UserManager.
-            }
+            // ------------------------------------
+            // ADMIN DASHBOARD
+            // ------------------------------------
 
-            var user = await _userManager.FindByNameAsync(email);
-
-            if (user != null &&
-                await _userManager.IsInRoleAsync(user, "Admin"))
+            if (isAdmin)
             {
                 return RedirectToAction(
                     "Index",
                     "Dashboard");
             }
 
-            if (user != null &&
-                await _userManager.IsInRoleAsync(user, "Host"))
+            // ------------------------------------
+            // HOST PORTAL
+            // ------------------------------------
+
+            if (isHost)
             {
                 return RedirectToAction(
                     "Index",
                     "HostPortal");
             }
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction(
+                "Index",
+                "Home");
         }
+
+        // ----------------------------------------
+        // LOGIN ERROR MESSAGES
+        // ----------------------------------------
 
         if (result.IsLockedOut)
         {
@@ -127,7 +195,8 @@ public class AccountController : Controller
     {
         await _signIn.SignOutAsync();
 
-        return RedirectToAction("Login");
+        return RedirectToAction(
+            nameof(Login));
     }
 
     // ============================================
@@ -169,7 +238,7 @@ public class AccountController : Controller
         }
 
         // ----------------------------------------
-        // PASSWORD LENGTH
+        // NEW PASSWORD LENGTH
         // ----------------------------------------
 
         if (newPassword.Length < 12 ||
@@ -196,10 +265,11 @@ public class AccountController : Controller
         }
 
         // ----------------------------------------
-        // GET LOGGED-IN USER
+        // GET CURRENT USER
         // ----------------------------------------
 
-        var user = await _userManager.GetUserAsync(User);
+        var user =
+            await _userManager.GetUserAsync(User);
 
         if (user == null)
         {
@@ -241,10 +311,11 @@ public class AccountController : Controller
         // CHANGE PASSWORD USING IDENTITY
         // ----------------------------------------
 
-        var result = await _userManager.ChangePasswordAsync(
-            user,
-            currentPassword,
-            newPassword);
+        var result =
+            await _userManager.ChangePasswordAsync(
+                user,
+                currentPassword,
+                newPassword);
 
         if (!result.Succeeded)
         {
@@ -267,13 +338,15 @@ public class AccountController : Controller
         TempData["SuccessMessage"] =
             "Your password has been changed successfully.";
 
-        return RedirectToAction(nameof(ChangePassword));
+        return RedirectToAction(
+            nameof(ChangePassword));
     }
 
     // ============================================
     // ACCESS DENIED
     // ============================================
 
+    [HttpGet]
     [AllowAnonymous]
     public IActionResult Denied()
     {

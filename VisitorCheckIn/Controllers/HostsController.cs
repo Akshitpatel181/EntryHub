@@ -62,14 +62,14 @@ public class HostsController : Controller
         if (!ModelState.IsValid)
             return View("Form", vm);
 
-        // Use one transaction so a failed login creation
-        // does not leave behind a partially created host.
+        // Use one transaction so failed login creation
+        // does not leave a partially created host.
         await using var transaction =
             await _db.Database.BeginTransactionAsync();
 
         var host = new VisitHost
         {
-            Name = vm.Name.Trim(),
+            Name = vm.Name,
             Email = vm.Email,
             Phone = vm.Phone,
             IsActive = vm.IsActive
@@ -152,8 +152,7 @@ public class HostsController : Controller
         await using var transaction =
             await _db.Database.BeginTransactionAsync();
 
-        // Update the Identity login first if one exists.
-        // This also synchronises the username and email.
+        // Synchronise existing Identity login details.
         if (host.UserId != null)
         {
             var identityUser =
@@ -183,12 +182,12 @@ public class HostsController : Controller
                 identityUser.NormalizedUserName =
                     _users.NormalizeName(vm.Email);
 
-                // An administrator changing a login email
-                // makes the new email confirmed for this account.
-                // We can add actual email verification later.
+                // Preserve current administrator-managed
+                // email confirmation behaviour.
                 identityUser.EmailConfirmed = true;
 
-                var update = await _users.UpdateAsync(identityUser);
+                var update =
+                    await _users.UpdateAsync(identityUser);
 
                 if (!update.Succeeded)
                 {
@@ -201,15 +200,15 @@ public class HostsController : Controller
             }
         }
 
-        host.Name = vm.Name.Trim();
+        host.Name = vm.Name;
         host.Email = vm.Email;
         host.Phone = vm.Phone;
         host.IsActive = vm.IsActive;
 
         await _db.SaveChangesAsync();
 
-        // Create a missing login, or reset an existing
-        // password only when a new password is provided.
+        // Create a missing login or reset an existing
+        // password only when a password is supplied.
         if (vm.CreateLogin &&
             (host.UserId == null ||
              !string.IsNullOrWhiteSpace(vm.Password)))
@@ -252,6 +251,7 @@ public class HostsController : Controller
 
         if (await _db.Visits.AnyAsync(v => v.HostId == id))
         {
+            // Preserve existing visit history.
             host.IsActive = false;
 
             TempData["Ok"] =
@@ -266,7 +266,8 @@ public class HostsController : Controller
 
                 if (user != null)
                 {
-                    var result = await _users.DeleteAsync(user);
+                    var result =
+                        await _users.DeleteAsync(user);
 
                     if (!result.Succeeded)
                     {
@@ -332,8 +333,8 @@ public class HostsController : Controller
         HostFormVm vm,
         bool isNew)
     {
-        // Email is required when creating a login,
-        // or when a login already exists.
+        // Email is required when creating a login
+        // or when an existing login is linked.
         if ((vm.CreateLogin || vm.HasLogin) &&
             string.IsNullOrWhiteSpace(vm.Email))
         {
@@ -342,13 +343,19 @@ public class HostsController : Controller
                 "An email address is required for a host login.");
         }
 
-        // Check duplicate host email addresses.
+        // ============================================
+        // DUPLICATE EMAIL VALIDATION
+        // ============================================
+
         if (!string.IsNullOrWhiteSpace(vm.Email))
         {
-            var duplicateHost = await _db.Hosts.AnyAsync(
-                h => h.Id != vm.Id &&
-                     h.Email != null &&
-                     h.Email.ToLower() == vm.Email.ToLower());
+            var email = vm.Email.ToLower();
+
+            var duplicateHost = await _db.Hosts
+                .AnyAsync(h =>
+                    h.Id != vm.Id &&
+                    h.Email != null &&
+                    h.Email.ToLower() == email);
 
             if (duplicateHost)
             {
@@ -357,8 +364,7 @@ public class HostsController : Controller
                     "Another host already uses this email address.");
             }
 
-            // Check if another ASP.NET Identity account
-            // already owns this login email.
+            // Check ASP.NET Identity email uniqueness.
             var existingUser =
                 await _users.FindByEmailAsync(vm.Email);
 
@@ -383,7 +389,11 @@ public class HostsController : Controller
             }
         }
 
-        // New login requires a password.
+        // ============================================
+        // PASSWORD VALIDATION
+        // ============================================
+
+        // A new Host Portal login needs a password.
         if (vm.CreateLogin &&
             !vm.HasLogin &&
             string.IsNullOrWhiteSpace(vm.Password))
@@ -393,9 +403,8 @@ public class HostsController : Controller
                 "Please create a password for this host.");
         }
 
-        // The ViewModel enforces minimum password
-        // length when a value is supplied.
-        // Also validate it explicitly on the server.
+        // Validate password length and confirmation
+        // whenever a new password is provided.
         if (!string.IsNullOrEmpty(vm.Password))
         {
             if (vm.Password.Length < 12 ||
@@ -405,10 +414,29 @@ public class HostsController : Controller
                     nameof(vm.Password),
                     "Password must be between 12 and 128 characters.");
             }
+
+            if (string.IsNullOrEmpty(vm.ConfirmPassword))
+            {
+                ModelState.AddModelError(
+                    nameof(vm.ConfirmPassword),
+                    "Please confirm your password.");
+            }
+            else if (vm.Password != vm.ConfirmPassword)
+            {
+                ModelState.AddModelError(
+                    nameof(vm.ConfirmPassword),
+                    "Passwords do not match.");
+            }
+        }
+        else if (!string.IsNullOrEmpty(vm.ConfirmPassword))
+        {
+            ModelState.AddModelError(
+                nameof(vm.Password),
+                "Please enter a password before confirming it.");
         }
 
-        // Do not require a new password when
-        // editing an existing host.
+        // Existing host passwords remain unchanged
+        // when Password and ConfirmPassword are empty.
     }
 
     // ============================================
@@ -446,7 +474,8 @@ public class HostsController : Controller
             {
                 return string.Join(
                     "; ",
-                    createResult.Errors.Select(e => e.Description));
+                    createResult.Errors.Select(
+                        e => e.Description));
             }
 
             var roleResult = await _users.AddToRoleAsync(
@@ -457,7 +486,8 @@ public class HostsController : Controller
             {
                 return string.Join(
                     "; ",
-                    roleResult.Errors.Select(e => e.Description));
+                    roleResult.Errors.Select(
+                        e => e.Description));
             }
 
             host.UserId = user.Id;
@@ -469,17 +499,17 @@ public class HostsController : Controller
             var token =
                 await _users.GeneratePasswordResetTokenAsync(user);
 
-            var resetResult =
-                await _users.ResetPasswordAsync(
-                    user,
-                    token,
-                    password);
+            var resetResult = await _users.ResetPasswordAsync(
+                user,
+                token,
+                password);
 
             if (!resetResult.Succeeded)
             {
                 return string.Join(
                     "; ",
-                    resetResult.Errors.Select(e => e.Description));
+                    resetResult.Errors.Select(
+                        e => e.Description));
             }
         }
 
