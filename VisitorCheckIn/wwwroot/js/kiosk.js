@@ -51,12 +51,26 @@
     var nav = el('div', { class: 'k-nav' },
       opts.back ? el('button', { class: 'k-btn k-ghost', onclick: opts.back }, '\u2190 Back') : el('span'),
       opts.next ? el('button', { class: 'k-btn k-primary', onclick: opts.next }, opts.nextLabel || 'Continue') : null);
-    app.append(el('div', { class: 'k-card' }, progress(step), el('h1', {}, title), sub ? el('p', { class: 'k-sub' }, sub) : null, body, err, nav));
+    app.append(el('div', { class: 'k-card' }, el('div', { class: 'k-card-brand' }, icon(ICON_BADGE), el('span', {}, cfg.company)), progress(step), el('h1', {}, title), sub ? el('p', { class: 'k-sub' }, sub) : null, body, err, nav));
     resetIdle();
   }
   function showError(m) { var e = document.getElementById('err'); if (e) e.textContent = m; }
 
-  // ---- 0. Welcome ----
+  // ---- 0. Welcome (new home layout) ----
+  function greeting() {
+    var h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  }
+  function icon(inner, cls) {
+    var s = document.createElement('span'); s.className = cls || 'k-ico';
+    s.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+    return s;
+  }
+  var ICON_BADGE = '<rect x="4" y="2.5" width="16" height="19" rx="3"/><path d="M9.5 6h5"/><circle cx="12" cy="11.5" r="2.6"/><path d="M7.5 18.2c.8-2.2 2.4-3.2 4.5-3.2s3.7 1 4.5 3.2"/>';
+  var ICON_IN = '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>';
+  var ICON_OUT = '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>';
+  var ICON_CHEV = '<polyline points="9 6 15 12 9 18"/>';
+
   var clockTimer = null;
   function tickClock() {
     var c = document.getElementById('k-clock'), d = document.getElementById('k-date');
@@ -65,17 +79,29 @@
     c.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     d.textContent = now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' });
   }
+  function actionButton(kind, title, sub, iconPath, onclick) {
+    return el('button', { class: 'k-action k-action-' + kind, type: 'button', onclick: onclick },
+      icon(iconPath),
+      el('span', { class: 'k-action-text' }, el('b', {}, title), el('small', {}, sub)),
+      icon(ICON_CHEV, 'k-chev'));
+  }
   function welcome() {
     state = { answers: {} }; state.step = 'welcome';
     stopCam();
     app.innerHTML = '';
-    app.append(el('div', { class: 'k-welcome' },
-      el('div', { class: 'k-clockbox' }, el('div', { class: 'k-clock', id: 'k-clock' }), el('div', { class: 'k-date', id: 'k-date' })),
-      el('h1', { class: 'k-company' }, cfg.company),
-      el('p', { class: 'k-welcome-text' }, cfg.welcome),
-      el('div', { class: 'k-actions' },
-        el('button', { class: 'k-btn k-primary k-xl', onclick: chooseType }, 'Check in'),
-        el('button', { class: 'k-btn k-outline k-xl', onclick: checkOut }, 'Check out'))));
+    app.append(el('div', { class: 'k-home' },
+      el('section', { class: 'k-home-left' },
+        el('div', { class: 'k-home-brand' }, icon(ICON_BADGE), el('span', {}, cfg.company)),
+        el('div', {},
+          el('p', { class: 'k-home-greet' }, 'Visitor check-in'),
+          el('h1', { class: 'k-home-title' }, greeting()),
+          el('p', { class: 'k-home-sub' }, cfg.welcome)),
+        el('div', { class: 'k-home-time' },
+          el('div', { class: 'k-clock', id: 'k-clock' }), el('div', { class: 'k-date', id: 'k-date' }))),
+      el('section', { class: 'k-home-right' },
+        actionButton('in', 'Check in', 'I\u2019m here for a visit', ICON_IN, chooseType),
+        actionButton('out', 'Check out', 'I\u2019m leaving today', ICON_OUT, checkOut),
+        el('p', { class: 'k-home-help' }, 'Need help? Please ask at reception.'))));
     tickClock(); if (!clockTimer) clockTimer = setInterval(tickClock, 15000);
     resetIdle();
   }
@@ -165,7 +191,6 @@
 
   // ---- 3b. Photo (mandatory) ----
   var camStream = null;
-
   function stopCam() {
     if (camStream) { camStream.getTracks().forEach(function (t) { t.stop(); }); camStream = null; }
   }
@@ -177,16 +202,18 @@
     c.getContext('2d').drawImage(source, 0, 0, c.width, c.height);
     return c.toDataURL('image/jpeg', 0.82);
   }
+
   function camMessage(e) {
-  var n = e && e.name;
-  if (n === 'NotAllowedError' || n === 'PermissionDeniedError' || n === 'SecurityError')
-    return 'Camera access is blocked. Tap the lock icon in the address bar, set Camera to Allow, reload, then tap Try camera again.';
-  if (n === 'NotReadableError' || n === 'TrackStartError')
-    return 'The camera is being used by another app. Close it, then tap Try camera again.';
-  if (n === 'NotFoundError' || n === 'DevicesNotFoundError')
-    return 'No camera was found. Tap \u201cUse camera app\u201d or ask reception for help.';
-  return 'The camera could not start. Tap Try camera again, or use the camera app.';
-}
+    var n = e && e.name;
+    if (n === 'NotAllowedError' || n === 'PermissionDeniedError' || n === 'SecurityError')
+      return 'Camera access is blocked. Tap the lock icon in the address bar, set Camera to Allow, reload, then tap Try camera again.';
+    if (n === 'NotReadableError' || n === 'TrackStartError')
+      return 'The camera is being used by another app. Close it, then tap Try camera again.';
+    if (n === 'NotFoundError' || n === 'DevicesNotFoundError')
+      return 'No camera was found. Tap \u201cUse camera app\u201d or ask reception for help.';
+    return 'The camera could not start. Tap Try camera again, or use the camera app.';
+  }
+
   function photo() {
     var required = cfg.requirePhoto !== false, nextBtn = null, counting = false;
     var video = el('video', { class: 'k-video', autoplay: '', playsinline: '' });
@@ -219,21 +246,15 @@
 
     async function startCam() {
       stopCam(); showError('');
-      // replace the first "if (!navigator.mediaDevices ...)" line with:
-if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
-  return fail('The camera needs a secure https address. Tap \u201cUse camera app\u201d.');
-
-// replace the whole catch block with:
-} catch (e) { fail(camMessage(e)); }
+      if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+        return fail('The camera needs a secure https address. Tap \u201cUse camera app\u201d.');
       msg.textContent = 'Starting camera\u2026 tap Allow if asked.'; stage.className = 'k-stage wait';
       try {
         camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false });
         video.srcObject = camStream; await video.play();
         setControls('live');
       } catch (e) {
-        var denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
-        fail(denied ? 'Camera access is blocked. Please allow the camera for this site, then tap Try camera again.'
-                    : 'No camera was found on this device. Tap \u201cUse camera app\u201d or ask reception for help.');
+        fail(camMessage(e));
       }
     }
 

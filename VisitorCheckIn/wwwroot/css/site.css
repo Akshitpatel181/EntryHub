@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Visitor Check-In  -  admin / host portal design system
+   EntryHub  -  admin / host portal design system
    Tokens -> base -> shell -> components -> pages
    ========================================================================== */
 @font-face { font-family: "Plus Jakarta Sans"; font-style: normal; font-weight: 200 800; font-display: swap;
@@ -273,100 +273,17 @@ details.answers .sig { max-width: 220px; border: 1px solid var(--line); border-r
 .toast-box { align-items: center; gap: 14px; }
 .toast-box img { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; flex: none; border: 2px solid rgba(255,255,255,.4); }
 
-
 /* ---------- Pair device (admin) ---------- */
-.pair-code {
-    text-align: center;
-    font-size: 1.8rem;
-    font-weight: 800;
-    letter-spacing: .5em;
-    padding: .7rem .5rem .7rem 1rem;
-}
-
-.pair-state > * + * {
-    margin-top: 12px;
-}
-
-.pair-scan {
-    position: relative;
-    width: min(100%, 360px);
-    aspect-ratio: 1;
-    border-radius: 16px;
-    overflow: hidden;
-    background: #0b1b22;
-    border: 1px solid rgba(255,255,255,.12);
-}
-
-    .pair-scan video {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .pair-scan .c {
-        position: absolute;
-        width: 46px;
-        height: 46px;
-        border: 4px solid #5eead4;
-        transition: border-color .2s;
-    }
-
-    .pair-scan .tl {
-        top: 14px;
-        left: 14px;
-        border-right: 0;
-        border-bottom: 0;
-        border-radius: 12px 0 0 0;
-    }
-
-    .pair-scan .tr {
-        top: 14px;
-        right: 14px;
-        border-left: 0;
-        border-bottom: 0;
-        border-radius: 0 12px 0 0;
-    }
-
-    .pair-scan .bl {
-        bottom: 14px;
-        left: 14px;
-        border-right: 0;
-        border-top: 0;
-        border-radius: 0 0 0 12px;
-    }
-
-    .pair-scan .br {
-        bottom: 14px;
-        right: 14px;
-        border-left: 0;
-        border-top: 0;
-        border-radius: 0 0 12px 0;
-    }
-
-    .pair-scan.ok .c {
-        border-color: #4ade80;
-    }
-
-.pair-msg {
-    color: var(--muted);
-    font-size: .9rem;
-    margin: 0;
-}
-
-.pair-alert {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 14px 16px;
-    border-radius: 12px;
-    background: rgba(220,53,69,.12);
-    border: 1px solid rgba(220,53,69,.45);
-    font-size: .92rem;
-}
-
-    .pair-alert ol {
-        margin: 6px 0 0;
-        padding-left: 1.2rem;
-    }
+.pair-code { text-align: center; font-size: 1.8rem; font-weight: 800; letter-spacing: .5em; padding: .7rem .5rem .7rem 1rem; }
+.pair-state > * + * { margin-top: 12px; }
+.pair-scan { position: relative; width: min(100%, 360px); aspect-ratio: 1; border-radius: 16px; overflow: hidden; background: #0b1b22; border: 1px solid rgba(255,255,255,.12); }
+.pair-scan video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pair-scan .c { position: absolute; width: 46px; height: 46px; border: 4px solid #5eead4; transition: border-color .2s; }
+.pair-scan .tl { top: 14px; left: 14px; border-right: 0; border-bottom: 0; border-radius: 12px 0 0 0; }
+.pair-scan .tr { top: 14px; right: 14px; border-left: 0; border-bottom: 0; border-radius: 0 12px 0 0; }
+.pair-scan .bl { bottom: 14px; left: 14px; border-right: 0; border-top: 0; border-radius: 0 0 0 12px; }
+.pair-scan .br { bottom: 14px; right: 14px; border-left: 0; border-top: 0; border-radius: 0 0 12px 0; }
+.pair-scan.ok .c { border-color: #4ade80; }
+.pair-msg { color: var(--muted); font-size: .9rem; margin: 0; }
+.pair-alert { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 12px; background: rgba(220,53,69,.12); border: 1px solid rgba(220,53,69,.45); font-size: .92rem; }
+.pair-alert ol { margin: 6px 0 0; padding-left: 1.2rem; }

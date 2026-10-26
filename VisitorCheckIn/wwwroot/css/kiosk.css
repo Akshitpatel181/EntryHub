@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Visitor Check-In  -  touch kiosk
+   EntryHub  -  touch kiosk
    Large targets (>= 56px), high contrast, no text selection, works offline.
    ========================================================================== */
 @font-face { font-family: "Plus Jakarta Sans"; font-style: normal; font-weight: 200 800; font-display: swap;
@@ -132,145 +132,160 @@ body.kiosk { word-spacing: .04em; font-family: var(--font); color: var(--ink); o
 @media (max-height: 700px) { .k-stage { width: min(100%, 360px); } .k-count { font-size: 6rem; } }
 
 /* ---------- pair screen ---------- */
-.k-seg {
-    display: flex;
-    gap: 6px;
-    padding: 5px;
-    background: #eaf0f2;
-    border-radius: 18px;
-    margin: 0 0 22px;
+.k-seg { display: flex; gap: 6px; padding: 5px; background: #eaf0f2; border-radius: 18px; margin: 0 0 22px; }
+.k-seg button { flex: 1; font: 700 1.1rem var(--font); padding: 14px; min-height: 56px; border: 0; border-radius: 14px; background: transparent; color: var(--ink-2); cursor: pointer; }
+.k-seg button.on { background: #fff; color: var(--accent-deep); box-shadow: 0 2px 8px rgba(16,37,46,.12); }
+.k-perm { text-align: center; padding: 26px 20px; border: 2px dashed var(--line-2); border-radius: 20px; background: #f7fafb; }
+.k-perm-ico { width: 72px; height: 72px; margin: 0 auto 12px; border-radius: 50%; background: var(--accent-tint); display: grid; place-items: center; font-size: 2rem; }
+.k-perm.bad { border-color: #f1b5ae; background: #fdf3f2; }
+.k-perm.bad .k-perm-ico { background: #fde4e1; }
+.k-perm b#camErrTitle, .k-perm > b { display: block; font-size: 1.3rem; margin-bottom: 6px; }
+.k-perm p { color: var(--muted); font-size: 1.05rem; line-height: 1.45; margin: 0 0 12px; }
+.k-steps { text-align: left; color: var(--ink-2); font-size: 1.02rem; line-height: 1.6; margin: 0 0 12px; padding-left: 1.4rem; }
+.k-scan { position: relative; width: min(100%, 420px); aspect-ratio: 1; margin: 0 auto 14px; border-radius: 22px; overflow: hidden; background: #0b1b22; }
+.k-scan video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.k-scan .c { position: absolute; width: 56px; height: 56px; border: 5px solid var(--glow); transition: border-color .2s; }
+.k-scan .tl { top: 18px; left: 18px; border-right: 0; border-bottom: 0; border-radius: 14px 0 0 0; }
+.k-scan .tr { top: 18px; right: 18px; border-left: 0; border-bottom: 0; border-radius: 0 14px 0 0; }
+.k-scan .bl { bottom: 18px; left: 18px; border-right: 0; border-top: 0; border-radius: 0 0 0 14px; }
+.k-scan .br { bottom: 18px; right: 18px; border-left: 0; border-top: 0; border-radius: 0 0 14px 0; }
+.k-scan.ok .c { border-color: #4ade80; }
+.k-perm .k-block + .k-block { margin-top: 10px; }
+
+/* ---------- home screen (EntryHub) ---------- */
+.k-home { width: 100%; max-width: 1100px; margin-inline: auto; display: grid; grid-template-columns: 1.15fr 1fr; gap: clamp(32px, 6vw, 96px); align-items: center; color: #fff; text-align: left; }
+.k-home-left { display: flex; flex-direction: column; gap: clamp(28px, 6vh, 60px); }
+.k-home-brand { display: flex; align-items: center; gap: 14px; font-size: 1.4rem; font-weight: 800; letter-spacing: -.02em; }
+.k-home-brand .k-ico { width: 50px; height: 50px; border-radius: 15px; background: var(--accent); display: grid; place-items: center; box-shadow: 0 12px 26px -10px rgba(11,122,117,.9); }
+.k-home-brand .k-ico svg { width: 28px; height: 28px; }
+.k-home-greet { color: var(--glow); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; font-size: .92rem; margin: 0 0 12px; }
+.k-home-title { font-size: clamp(2.6rem, 5.4vw, 4.4rem); font-weight: 800; letter-spacing: -.045em; line-height: 1; margin: 0 0 16px; }
+.k-home-sub { color: #b8cfd6; font-size: clamp(1.1rem, 2vw, 1.4rem); margin: 0; max-width: 28ch; line-height: 1.4; }
+.k-home-time { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.16); }
+.k-home-time .k-clock { font-size: clamp(2.6rem, 5.6vw, 4.2rem); letter-spacing: -.04em; }
+.k-home-time .k-date { margin: 0; }
+
+/* Check in / Check out buttons - sizes are controlled in KIOSK SIZE CONTROLS at the bottom */
+.k-home-right { width: 100%; max-width: var(--size-action-width, 420px); justify-self: center; display: flex; flex-direction: column; gap: 14px; }
+.k-action { display: flex; align-items: center; gap: 16px; width: 100%; min-height: var(--size-action-height, 84px); padding: 0 22px 0 18px; text-align: left; font-family: var(--font); color: #fff; cursor: pointer; border-radius: 18px; border: 2px solid transparent; transition: transform .1s, background .15s, border-color .15s; }
+.k-action:active { transform: scale(.985); }
+.k-action-in { background: linear-gradient(135deg, #15b6aa, #0e8f88); box-shadow: 0 14px 28px -16px rgba(18,168,159,.85); }
+.k-action-in:hover { background: linear-gradient(135deg, #19c4b7, #10a198); }
+.k-action-out { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.22); }
+.k-action-out:hover { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.4); }
+.k-action .k-ico { flex: 0 0 auto; width: var(--size-action-icon, 48px); height: var(--size-action-icon, 48px); border-radius: 14px; display: grid; place-items: center; background: rgba(255,255,255,.16); }
+.k-action .k-ico svg { width: calc(var(--size-action-icon, 48px) * .5); height: calc(var(--size-action-icon, 48px) * .5); }
+.k-action-text { display: flex; flex-direction: column; gap: 3px; flex: 1; text-align: left; }
+.k-action-text b { font-size: var(--size-action-title, 1.3rem); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.k-action-text small { font-size: .95rem; color: rgba(255,255,255,.75); font-weight: 500; }
+.k-action .k-chev { display: grid; place-items: center; opacity: .75; }
+.k-action .k-chev svg { width: 22px; height: 22px; }
+.k-home-help { color: rgba(255,255,255,.55); font-size: .95rem; margin: 6px 4px 0; text-align: center; }
+
+@media (max-width: 900px) {
+  .k-home { grid-template-columns: 1fr; max-width: 640px; text-align: center; gap: 36px; }
+  .k-home-left { align-items: center; gap: 28px; }
+  .k-home-sub { margin-inline: auto; }
+  .k-home-time { justify-content: center; border-top: 0; padding-top: 0; }
 }
+@media (max-height: 640px) { .k-home-left { gap: 20px; } }
 
-    .k-seg button {
-        flex: 1;
-        font: 700 1.1rem var(--font);
-        padding: 14px;
-        min-height: 56px;
-        border: 0;
-        border-radius: 14px;
-        background: transparent;
-        color: var(--ink-2);
-        cursor: pointer;
-    }
+/* ==========================================================================
+   EntryHub - dark theme for every kiosk step screen
+   (visitor type, details, questions, photo, host, done, check-out, pair)
+   Paste at the VERY END of kiosk.css
+   ========================================================================== */
 
-        .k-seg button.on {
-            background: #fff;
-            color: var(--accent-deep);
-            box-shadow: 0 2px 8px rgba(16,37,46,.12);
-        }
+/* entrance animation (disabled automatically by the reduced-motion rule) */
+@keyframes k-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.k-card, .k-home { animation: k-rise .35s ease-out both; }
 
-.k-perm {
-    text-align: center;
-    padding: 26px 20px;
-    border: 2px dashed var(--line-2);
-    border-radius: 20px;
-    background: #f7fafb;
+/* ---------- card ---------- */
+.k-card { background: linear-gradient(165deg, #14323f 0%, #0e2631 100%); color: #fff; border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 40px 90px -30px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.06); }
+.k-card h1 { color: #fff; }
+.k-sub { color: #b8cfd6; }
+.k-hint { color: rgba(255,255,255,.55); }
+.k-error { color: #ff9f97; }
+.k-center { color: #fff; }
+
+/* small brand row at the top of every card (added by screen() in kiosk.js) */
+.k-card-brand { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; font-weight: 800; font-size: 1.1rem; letter-spacing: -.02em; color: #d8eaee; }
+.k-card-brand .k-ico { width: 38px; height: 38px; border-radius: 12px; background: var(--accent); display: grid; place-items: center; box-shadow: 0 8px 18px -8px rgba(11,122,117,.9); }
+.k-card-brand .k-ico svg { width: 22px; height: 22px; color: #fff; }
+
+/* progress */
+.k-progress span { background: rgba(255,255,255,.14); }
+.k-progress span.on { background: linear-gradient(90deg, var(--glow), #12a198); }
+
+/* ---------- buttons ---------- */
+.k-primary { background: linear-gradient(135deg, #12a198, var(--accent)); box-shadow: 0 16px 32px -14px rgba(11,122,117,.95); }
+.k-primary:hover { background: linear-gradient(135deg, #15b2a8, #0d8a84); }
+.k-primary:active { background: var(--accent-deep); }
+.k-card .k-ghost { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.18); }
+.k-card .k-ghost:hover { background: rgba(255,255,255,.14); }
+.k-card .k-ghost:active { background: rgba(255,255,255,.2); }
+
+/* ---------- choices ---------- */
+.k-tile { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); color: #fff; }
+.k-tile:hover { border-color: var(--glow); background: rgba(63,208,196,.1); }
+.k-tile:active, .k-tile.sel { background: linear-gradient(135deg, #12a198, var(--accent)); border-color: transparent; color: #fff; }
+.k-avatar { background: rgba(63,208,196,.18); color: var(--glow); }
+.k-tile:active .k-avatar, .k-tile.sel .k-avatar { background: rgba(255,255,255,.24); color: #fff; }
+
+/* ---------- inputs ---------- */
+.k-label { color: #d3e5ea; }
+.k-input, .k-select { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.2); color: #fff; }
+.k-input::placeholder { color: rgba(255,255,255,.4); }
+.k-input:focus, .k-select:focus { border-color: var(--glow); box-shadow: 0 0 0 5px rgba(63,208,196,.22); background: rgba(255,255,255,.1); }
+.k-select option { color: #10252e; background: #fff; }
+.k-check input { accent-color: var(--glow); }
+.k-sig { background: #fff; border: 3px dashed var(--glow); }
+
+/* ---------- photo ---------- */
+.k-stage { border-color: rgba(255,255,255,.18); background: #081820; }
+.k-stage.review { border-color: var(--glow); }
+
+/* ---------- done: keep the visitor badge white so it pops ---------- */
+.k-badge { color: var(--ink); border-color: rgba(255,255,255,.2); box-shadow: 0 24px 50px -22px rgba(0,0,0,.7); }
+.k-done .tick { background: rgba(74,222,128,.16); color: #4ade80; }
+
+/* ---------- pair screen (standalone kiosk Pair page) ---------- */
+.k-seg { background: rgba(255,255,255,.08); }
+.k-seg button { color: #b8cfd6; }
+.k-seg button.on { background: linear-gradient(135deg, #12a198, var(--accent)); color: #fff; box-shadow: 0 8px 18px -8px rgba(11,122,117,.9); }
+.k-perm { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.22); }
+.k-perm-ico { background: rgba(63,208,196,.16); }
+.k-perm > b, .k-perm b#camErrTitle { color: #fff; }
+.k-perm p { color: #b8cfd6; }
+.k-perm.bad { background: rgba(255,99,88,.1); border-color: rgba(255,130,120,.5); }
+.k-perm.bad .k-perm-ico { background: rgba(255,99,88,.18); }
+.k-steps { color: #d3e5ea; }
+.k-scan { border: 1px solid rgba(255,255,255,.18); }
+
+@media (max-width: 640px) { .k-card-brand { margin-bottom: 16px; } }
+
+/* ==========================================================================
+   KIOSK SIZE CONTROLS  -  change the numbers in :root, nothing else.
+   Keep this block at the VERY END of the file.
+   ========================================================================== */
+:root {
+  --size-action-height: 84px;   /* Check in / Check out buttons (keep 56px or more) */
+  --size-action-width: 420px;   /* width of Check in / Check out buttons */
+  --size-action-title: 1.3rem;  /* text size on those buttons */
+  --size-action-icon: 48px;     /* icon square on those buttons */
+
+  --size-btn-height: 64px;      /* Back, Continue, Take photo, Retake */
+  --size-btn-font: 1.3rem;
+  --size-btn-width: 200px;      /* minimum width of the Continue button */
+
+  --size-tile-height: 76px;     /* visitor type and host choices, Yes / No */
+  --size-tile-font: 1.35rem;
+
+  --size-input-height: 68px;    /* name, company and question fields */
+  --size-input-font: 1.4rem;
 }
-
-.k-perm-ico {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 12px;
-    border-radius: 50%;
-    background: var(--accent-tint);
-    display: grid;
-    place-items: center;
-    font-size: 2rem;
-}
-
-.k-perm.bad {
-    border-color: #f1b5ae;
-    background: #fdf3f2;
-}
-
-    .k-perm.bad .k-perm-ico {
-        background: #fde4e1;
-    }
-
-.k-perm b#camErrTitle, .k-perm > b {
-    display: block;
-    font-size: 1.3rem;
-    margin-bottom: 6px;
-}
-
-.k-perm p {
-    color: var(--muted);
-    font-size: 1.05rem;
-    line-height: 1.45;
-    margin: 0 0 12px;
-}
-
-.k-steps {
-    text-align: left;
-    color: var(--ink-2);
-    font-size: 1.02rem;
-    line-height: 1.6;
-    margin: 0 0 12px;
-    padding-left: 1.4rem;
-}
-
-.k-scan {
-    position: relative;
-    width: min(100%, 420px);
-    aspect-ratio: 1;
-    margin: 0 auto 14px;
-    border-radius: 22px;
-    overflow: hidden;
-    background: #0b1b22;
-}
-
-    .k-scan video {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .k-scan .c {
-        position: absolute;
-        width: 56px;
-        height: 56px;
-        border: 5px solid var(--glow);
-        transition: border-color .2s;
-    }
-
-    .k-scan .tl {
-        top: 18px;
-        left: 18px;
-        border-right: 0;
-        border-bottom: 0;
-        border-radius: 14px 0 0 0;
-    }
-
-    .k-scan .tr {
-        top: 18px;
-        right: 18px;
-        border-left: 0;
-        border-bottom: 0;
-        border-radius: 0 14px 0 0;
-    }
-
-    .k-scan .bl {
-        bottom: 18px;
-        left: 18px;
-        border-right: 0;
-        border-top: 0;
-        border-radius: 0 0 0 14px;
-    }
-
-    .k-scan .br {
-        bottom: 18px;
-        right: 18px;
-        border-left: 0;
-        border-top: 0;
-        border-radius: 0 0 14px 0;
-    }
-
-    .k-scan.ok .c {
-        border-color: #4ade80;
-    }
-
-.k-perm .k-block + .k-block {
-    margin-top: 10px;
-}
+.k-nav .k-btn, .k-cam-controls .k-btn:not(.k-small), .k-block { min-height: var(--size-btn-height); font-size: var(--size-btn-font); }
+.k-nav .k-primary { min-width: var(--size-btn-width); }
+.k-tile { min-height: var(--size-tile-height); font-size: var(--size-tile-font); }
+.k-input, .k-select { min-height: var(--size-input-height); font-size: var(--size-input-font); }
