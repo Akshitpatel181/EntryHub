@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,10 @@ namespace VisitorCheckIn.Data;
 
 public class AppDbContext : IdentityDbContext<IdentityUser>
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options)
+    {
+    }
 
     public DbSet<VisitHost> Hosts => Set<VisitHost>();
     public DbSet<HostDevice> HostDevices => Set<HostDevice>();
@@ -23,38 +27,133 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
     {
         base.OnModelCreating(b);
 
-        b.Entity<VisitHost>().ToTable("Hosts");
+        // ============================================
+        // HOSTS
+        // ============================================
 
-        b.Entity<HostDevice>().HasOne(d => d.Host).WithMany(h => h.Devices)
-            .HasForeignKey(d => d.HostId).OnDelete(DeleteBehavior.Cascade);
-        b.Entity<HostDevice>().Property(d => d.Endpoint).HasMaxLength(2000);
+        b.Entity<VisitHost>()
+            .ToTable("Hosts");
 
-        b.Entity<Visit>().HasOne(v => v.Host).WithMany()
-            .HasForeignKey(v => v.HostId).OnDelete(DeleteBehavior.Restrict);
-        b.Entity<Visit>().HasOne(v => v.KioskDevice).WithMany()
-            .HasForeignKey(v => v.KioskDeviceId).OnDelete(DeleteBehavior.SetNull);
+        b.Entity<HostDevice>()
+            .HasOne(d => d.Host)
+            .WithMany(h => h.Devices)
+            .HasForeignKey(d => d.HostId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        b.Entity<Visit>().Property(v => v.PhotoToken).HasMaxLength(64);
+        b.Entity<HostDevice>()
+            .Property(d => d.Endpoint)
+            .HasMaxLength(2000);
 
-        b.Entity<VisitPhoto>().HasOne(p => p.Visit).WithMany()
-            .HasForeignKey(p => p.VisitId).OnDelete(DeleteBehavior.Cascade);
-        b.Entity<VisitPhoto>().Property(p => p.Token).HasMaxLength(64).IsRequired();
-        b.Entity<VisitPhoto>().Property(p => p.ContentType).HasMaxLength(50).IsRequired();
-        b.Entity<VisitPhoto>().Property(p => p.Data).IsRequired();
-        b.Entity<VisitPhoto>().HasIndex(p => p.Token).IsUnique();
+        // ============================================
+        // VISITS
+        // ============================================
 
-        b.Entity<AppSetting>().HasKey(x => x.Key);
-        b.Entity<AppSetting>().Property(x => x.Key).HasMaxLength(100);
+        b.Entity<Visit>()
+            .HasOne(v => v.Host)
+            .WithMany()
+            .HasForeignKey(v => v.HostId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        b.Entity<VisitAnswer>().HasOne(a => a.Visit).WithMany(v => v.Answers)
-            .HasForeignKey(a => a.VisitId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<Visit>()
+            .HasOne(v => v.KioskDevice)
+            .WithMany()
+            .HasForeignKey(v => v.KioskDeviceId)
+            .OnDelete(DeleteBehavior.SetNull);
 
-        b.Entity<KioskDevice>().Property(d => d.TokenHash).HasMaxLength(64);
-        b.Entity<KioskDevice>().HasIndex(d => d.TokenHash).IsUnique();
+        b.Entity<Visit>()
+            .Property(v => v.PhotoToken)
+            .HasMaxLength(64);
 
-        b.Entity<EnrollmentToken>().Property(e => e.Code).HasMaxLength(10);
-        b.Entity<EnrollmentToken>().Property(e => e.LinkTokenHash).HasMaxLength(64);
-        b.Entity<EnrollmentToken>().HasIndex(e => e.Code);
-        b.Entity<EnrollmentToken>().HasIndex(e => e.LinkTokenHash);
+        // ============================================
+        // UNIQUE CHECK-IN SUBMISSION ID
+        // ============================================
+
+        // Existing visits have NULL SubmissionId.
+        // New check-ins will receive a GUID.
+
+        b.Entity<Visit>()
+            .HasIndex(v => v.SubmissionId)
+            .IsUnique()
+            .HasDatabaseName("IX_Visits_SubmissionId")
+            .HasFilter("[SubmissionId] IS NOT NULL");
+
+        // ============================================
+        // VISITOR PHOTOS
+        // ============================================
+
+        b.Entity<VisitPhoto>()
+            .HasOne(p => p.Visit)
+            .WithMany()
+            .HasForeignKey(p => p.VisitId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        b.Entity<VisitPhoto>()
+            .Property(p => p.Token)
+            .HasMaxLength(64)
+            .IsRequired();
+
+        b.Entity<VisitPhoto>()
+            .Property(p => p.ContentType)
+            .HasMaxLength(50)
+            .IsRequired();
+
+        b.Entity<VisitPhoto>()
+            .Property(p => p.Data)
+            .IsRequired();
+
+        b.Entity<VisitPhoto>()
+            .HasIndex(p => p.Token)
+            .IsUnique();
+
+        // ============================================
+        // APPLICATION SETTINGS
+        // ============================================
+
+        b.Entity<AppSetting>()
+            .HasKey(x => x.Key);
+
+        b.Entity<AppSetting>()
+            .Property(x => x.Key)
+            .HasMaxLength(100);
+
+        // ============================================
+        // VISITOR ANSWERS
+        // ============================================
+
+        b.Entity<VisitAnswer>()
+            .HasOne(a => a.Visit)
+            .WithMany(v => v.Answers)
+            .HasForeignKey(a => a.VisitId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ============================================
+        // KIOSK DEVICES
+        // ============================================
+
+        b.Entity<KioskDevice>()
+            .Property(d => d.TokenHash)
+            .HasMaxLength(64);
+
+        b.Entity<KioskDevice>()
+            .HasIndex(d => d.TokenHash)
+            .IsUnique();
+
+        // ============================================
+        // ENROLLMENT TOKENS
+        // ============================================
+
+        b.Entity<EnrollmentToken>()
+            .Property(e => e.Code)
+            .HasMaxLength(10);
+
+        b.Entity<EnrollmentToken>()
+            .Property(e => e.LinkTokenHash)
+            .HasMaxLength(64);
+
+        b.Entity<EnrollmentToken>()
+            .HasIndex(e => e.Code);
+
+        b.Entity<EnrollmentToken>()
+            .HasIndex(e => e.LinkTokenHash);
     }
 }

@@ -13,14 +13,28 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
+
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(o =>
 {
-    o.Password.RequiredLength = 8;
-    o.Password.RequireNonAlphanumeric = false;
+    // PASSWORD SECURITY
+    o.Password.RequiredLength = 12;
+    o.Password.RequiredUniqueChars = 4;
+    o.Password.RequireDigit = false;
+    o.Password.RequireLowercase = false;
     o.Password.RequireUppercase = false;
+    o.Password.RequireNonAlphanumeric = false;
+
+    // EMAIL
     o.User.RequireUniqueEmail = true;
+
+    // ACCOUNT LOCKOUT
+    o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     o.Lockout.MaxFailedAccessAttempts = 8;
-}).AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
+    o.Lockout.AllowedForNewUsers = true;
+})
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+
 
 
 builder.Services.ConfigureApplicationCookie(o =>

@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,23 +19,120 @@ public class AccountController : Controller
         _userManager = userManager;
     }
 
-    [HttpGet, AllowAnonymous]
-    public IActionResult Login(string returnUrl = null) { ViewBag.ReturnUrl = returnUrl; return View(new LoginVm()); }
+    // ============================================
+    // LOGIN PAGE
+    // ============================================
 
-    [HttpPost, AllowAnonymous]
-    public async Task<IActionResult> Login(LoginVm vm, string returnUrl = null)
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult Login(string? returnUrl = null)
     {
-        if (!ModelState.IsValid) return View(vm);
-        var r = await _signIn.PasswordSignInAsync(vm.Email, vm.Password, vm.Remember, lockoutOnFailure: true);
-        if (r.Succeeded)
-            return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? Redirect(returnUrl) : RedirectToAction("Index", "Home");
-        ModelState.AddModelError("", r.IsLockedOut ? "Account locked. Try again later." : "Invalid email or password.");
+        ViewBag.ReturnUrl = returnUrl;
+
+        return View(new LoginVm());
+    }
+
+    // ============================================
+    // LOGIN SUBMISSION
+    // ============================================
+
+    [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Login(
+        LoginVm vm,
+        string? returnUrl = null)
+    {
+        ViewBag.ReturnUrl = returnUrl;
+
+        if (!ModelState.IsValid)
+            return View(vm);
+
+        var email = vm.Email.Trim();
+
+        var result = await _signIn.PasswordSignInAsync(
+            email,
+            vm.Password,
+            vm.Remember,
+            lockoutOnFailure: true);
+
+        if (result.Succeeded)
+        {
+            // Preserve valid return URLs, such as a
+            // page the user originally tried to access.
+            if (!string.IsNullOrEmpty(returnUrl) &&
+                Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+
+            // Automatically direct hosts to their portal.
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                // The authentication principal may not
+                // be refreshed on this same request,
+                // so role lookup below uses UserManager.
+            }
+
+            var user = await _userManager.FindByNameAsync(email);
+
+            if (user != null &&
+                await _userManager.IsInRoleAsync(user, "Admin"))
+            {
+                return RedirectToAction(
+                    "Index",
+                    "Dashboard");
+            }
+
+            if (user != null &&
+                await _userManager.IsInRoleAsync(user, "Host"))
+            {
+                return RedirectToAction(
+                    "Index",
+                    "HostPortal");
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
+        if (result.IsLockedOut)
+        {
+            ModelState.AddModelError(
+                "",
+                "Account temporarily locked. Please try again later.");
+        }
+        else if (result.IsNotAllowed)
+        {
+            ModelState.AddModelError(
+                "",
+                "This account is not currently permitted to sign in.");
+        }
+        else
+        {
+            ModelState.AddModelError(
+                "",
+                "Invalid email or password.");
+        }
+
         return View(vm);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Logout() { await _signIn.SignOutAsync(); return RedirectToAction("Login"); }
+    // ============================================
+    // LOGOUT
+    // ============================================
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Logout()
+    {
+        await _signIn.SignOutAsync();
+
+        return RedirectToAction("Login");
+    }
+
+    // ============================================
+    // CHANGE PASSWORD PAGE
+    // ============================================
 
     [Authorize]
     [HttpGet]
@@ -42,6 +140,10 @@ public class AccountController : Controller
     {
         return View();
     }
+
+    // ============================================
+    // CHANGE PASSWORD SUBMISSION
+    // ============================================
 
     [Authorize]
     [HttpPost]
@@ -51,43 +153,130 @@ public class AccountController : Controller
         string newPassword,
         string confirmPassword)
     {
-        if (string.IsNullOrWhiteSpace(currentPassword) ||
-            string.IsNullOrWhiteSpace(newPassword) ||
-            string.IsNullOrWhiteSpace(confirmPassword))
+        // ----------------------------------------
+        // REQUIRED FIELDS
+        // ----------------------------------------
+
+        if (string.IsNullOrEmpty(currentPassword) ||
+            string.IsNullOrEmpty(newPassword) ||
+            string.IsNullOrEmpty(confirmPassword))
         {
-            ModelState.AddModelError("", "All fields are required.");
+            ModelState.AddModelError(
+                "",
+                "All password fields are required.");
+
             return View();
         }
 
-        if (newPassword != confirmPassword)
+        // ----------------------------------------
+        // PASSWORD LENGTH
+        // ----------------------------------------
+
+        if (newPassword.Length < 12 ||
+            newPassword.Length > 128)
         {
-            ModelState.AddModelError("", "New passwords do not match.");
+            ModelState.AddModelError(
+                "",
+                "New password must be between 12 and 128 characters.");
+
             return View();
         }
+
+        // ----------------------------------------
+        // CONFIRM PASSWORD
+        // ----------------------------------------
+
+        if (newPassword != confirmPassword)
+        {
+            ModelState.AddModelError(
+                "",
+                "New password and confirmation do not match.");
+
+            return View();
+        }
+
+        // ----------------------------------------
+        // GET LOGGED-IN USER
+        // ----------------------------------------
 
         var user = await _userManager.GetUserAsync(User);
 
         if (user == null)
-            return Challenge();
-
-        var result = await _userManager.ChangePasswordAsync(
-            user, currentPassword, newPassword);
-
-        if (!result.Succeeded)
         {
-            foreach (var error in result.Errors)
-                ModelState.AddModelError("", error.Description);
+            return Challenge();
+        }
+
+        // ----------------------------------------
+        // VERIFY CURRENT PASSWORD
+        // ----------------------------------------
+
+        var currentIsCorrect =
+            await _userManager.CheckPasswordAsync(
+                user,
+                currentPassword);
+
+        if (!currentIsCorrect)
+        {
+            ModelState.AddModelError(
+                "",
+                "Current password is incorrect.");
 
             return View();
         }
 
+        // ----------------------------------------
+        // PREVENT REUSING CURRENT PASSWORD
+        // ----------------------------------------
+
+        if (currentPassword == newPassword)
+        {
+            ModelState.AddModelError(
+                "",
+                "Your new password must be different from your current password.");
+
+            return View();
+        }
+
+        // ----------------------------------------
+        // CHANGE PASSWORD USING IDENTITY
+        // ----------------------------------------
+
+        var result = await _userManager.ChangePasswordAsync(
+            user,
+            currentPassword,
+            newPassword);
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(
+                    "",
+                    error.Description);
+            }
+
+            return View();
+        }
+
+        // ----------------------------------------
+        // REFRESH LOGIN SESSION
+        // ----------------------------------------
+
         await _signIn.RefreshSignInAsync(user);
 
-        TempData["SuccessMessage"] = "Password changed successfully.";
+        TempData["SuccessMessage"] =
+            "Your password has been changed successfully.";
 
         return RedirectToAction(nameof(ChangePassword));
     }
 
+    // ============================================
+    // ACCESS DENIED
+    // ============================================
+
     [AllowAnonymous]
-    public IActionResult Denied() => View();
+    public IActionResult Denied()
+    {
+        return View();
+    }
 }

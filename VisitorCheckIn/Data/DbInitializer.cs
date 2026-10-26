@@ -1,5 +1,11 @@
+
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using VisitorCheckIn.Models;
 using VisitorCheckIn.Services;
 
@@ -11,79 +17,145 @@ public static class DbInitializer
     {
         var db = sp.GetRequiredService<AppDbContext>();
         var cfg = sp.GetRequiredService<IConfiguration>();
-        // For production use EF migrations (dotnet ef migrations add Initial) instead of EnsureCreated.
-        await db.Database.EnsureCreatedAsync();
-        await UpgradeSchemaAsync(db);
+
+        // Use EF Core migrations for database management.
+        await db.Database.MigrateAsync();
+
+        // ============================================
+        // CREATE ROLES
+        // ============================================
 
         var roles = sp.GetRequiredService<RoleManager<IdentityRole>>();
-        foreach (var r in new[] { "Admin", "Host" })
-            if (!await roles.RoleExistsAsync(r)) await roles.CreateAsync(new IdentityRole(r));
+
+        foreach (var roleName in new[] { "Admin", "Host" })
+        {
+            if (!await roles.RoleExistsAsync(roleName))
+            {
+                var roleResult = await roles.CreateAsync(
+                    new IdentityRole(roleName));
+
+                if (!roleResult.Succeeded)
+                {
+                    var errors = string.Join(
+                        " | ",
+                        roleResult.Errors.Select(e => e.Description));
+
+                    throw new InvalidOperationException(
+                        "Role creation failed: " + errors);
+                }
+            }
+        }
+
+        // ============================================
+        // CREATE ADMIN ACCOUNT
+        // ============================================
 
         var users = sp.GetRequiredService<UserManager<IdentityUser>>();
-        var email = cfg["Admin:Email"];
+
+        var email = cfg["Admin:Email"]?.Trim();
         var password = cfg["Admin:Password"];
 
         if (!string.IsNullOrWhiteSpace(email) &&
-            !string.IsNullOrWhiteSpace(password) &&
-            await users.FindByEmailAsync(email) == null)
+            !string.IsNullOrWhiteSpace(password))
         {
-            var admin = new IdentityUser
-            {
-                UserName = email,
-                Email = email,
-                EmailConfirmed = true
-            };
+            var admin = await users.FindByEmailAsync(email);
 
-            var result = await users.CreateAsync(admin, password);
-
-            if (!result.Succeeded)
+            if (admin == null)
             {
-                throw new InvalidOperationException(
-                    "Administrator account creation failed.");
+                admin = new IdentityUser
+                {
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true
+                };
+
+                var result = await users.CreateAsync(
+                    admin,
+                    password);
+
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(
+                        " | ",
+                        result.Errors.Select(e =>
+                            $"{e.Code}: {e.Description}"));
+
+                    throw new InvalidOperationException(
+                        "ADMIN CREATION ERROR DETAILS: " + errors);
+                }
             }
 
-            await users.AddToRoleAsync(admin, "Admin");
+            // Ensure the configured administrator has
+            // the Admin role.
+            if (!await users.IsInRoleAsync(admin, "Admin"))
+            {
+                var roleResult = await users.AddToRoleAsync(
+                    admin,
+                    "Admin");
+
+                if (!roleResult.Succeeded)
+                {
+                    var errors = string.Join(
+                        " | ",
+                        roleResult.Errors.Select(e => e.Description));
+
+                    throw new InvalidOperationException(
+                        "Admin role assignment failed: " + errors);
+                }
+            }
         }
+
+        // ============================================
+        // DEFAULT KIOSK QUESTIONS
+        // ============================================
 
         if (!await db.Questions.AnyAsync())
         {
             db.Questions.AddRange(
-                new Question { Text = "Phone number", Type = QuestionType.Phone, IsRequired = true, SortOrder = 1, VisitorType = "All" },
-                new Question { Text = "Do you have a company laptop with you?", Type = QuestionType.YesNo, IsRequired = true, SortOrder = 2, VisitorType = "All" },
-                new Question { Text = "Reason for visit", Type = QuestionType.Dropdown, OptionsText = "Meeting\nDelivery\nInterview\nMaintenance\nOther", IsRequired = true, SortOrder = 3, VisitorType = "All" },
-                new Question { Text = "I agree to the site safety and confidentiality terms (sign below)", Type = QuestionType.Signature, IsRequired = true, SortOrder = 4, VisitorType = "Contractor" });
+                new Question
+                {
+                    Text = "Phone number",
+                    Type = QuestionType.Phone,
+                    IsRequired = true,
+                    SortOrder = 1,
+                    VisitorType = "All"
+                },
+                new Question
+                {
+                    Text = "Do you have a company laptop with you?",
+                    Type = QuestionType.YesNo,
+                    IsRequired = true,
+                    SortOrder = 2,
+                    VisitorType = "All"
+                },
+                new Question
+                {
+                    Text = "Reason for visit",
+                    Type = QuestionType.Dropdown,
+                    OptionsText =
+                        "Meeting\nDelivery\nInterview\nMaintenance\nOther",
+                    IsRequired = true,
+                    SortOrder = 3,
+                    VisitorType = "All"
+                },
+                new Question
+                {
+                    Text = "I agree to the site safety and confidentiality terms (sign below)",
+                    Type = QuestionType.Signature,
+                    IsRequired = true,
+                    SortOrder = 4,
+                    VisitorType = "Contractor"
+                }
+            );
+
             await db.SaveChangesAsync();
         }
 
-        // Push keys: use appsettings if given, otherwise create once and keep them in the database.
-        await sp.GetRequiredService<VapidKeyService>().InitAsync(db, cfg);
-    }
+        // ============================================
+        // PUSH NOTIFICATION KEYS
+        // ============================================
 
-    /// <summary>EnsureCreated never changes an existing database, so anything added after the first release is
-    /// added here. Every statement is guarded and safe to run on each start.</summary>
-    private static async Task UpgradeSchemaAsync(AppDbContext db)
-    {
-        await db.Database.ExecuteSqlRawAsync(
-            "IF COL_LENGTH('Visits', 'PhotoToken') IS NULL ALTER TABLE [Visits] ADD [PhotoToken] nvarchar(64) NULL;");
-
-        await db.Database.ExecuteSqlRawAsync(@"
-IF OBJECT_ID(N'[VisitPhotos]', N'U') IS NULL
-BEGIN
-  CREATE TABLE [VisitPhotos] (
-    [Id] int NOT NULL IDENTITY(1,1) PRIMARY KEY,
-    [VisitId] int NOT NULL,
-    [Token] nvarchar(64) NOT NULL,
-    [Data] varbinary(max) NOT NULL,
-    [ContentType] nvarchar(50) NOT NULL,
-    [CreatedUtc] datetime2 NOT NULL,
-    CONSTRAINT [FK_VisitPhotos_Visits_VisitId] FOREIGN KEY ([VisitId]) REFERENCES [Visits]([Id]) ON DELETE CASCADE
-  );
-  CREATE UNIQUE INDEX [IX_VisitPhotos_Token] ON [VisitPhotos]([Token]);
-  CREATE INDEX [IX_VisitPhotos_VisitId] ON [VisitPhotos]([VisitId]);
-END");
-
-        await db.Database.ExecuteSqlRawAsync(@"
-IF OBJECT_ID(N'[Settings]', N'U') IS NULL
-  CREATE TABLE [Settings] ([Key] nvarchar(100) NOT NULL PRIMARY KEY, [Value] nvarchar(max) NULL);");
+        await sp.GetRequiredService<VapidKeyService>()
+            .InitAsync(db, cfg);
     }
 }

@@ -1,19 +1,545 @@
 @model HostFormVm
-@{ ViewData["Title"] = Model.Id == 0 ? "Add host" : "Edit host"; }
-<div class="page-head"><div><h1>@ViewData["Title"]</h1><p>Visitors pick hosts from this list on the kiosk.</p></div></div>
-<form method="post" class="card form-card"><div class="card-body">
-  <div asp-validation-summary="All" class="text-danger"></div>
-  <div class="mb-3"><label asp-for="Name" class="form-label">Name</label><input asp-for="Name" class="form-control" /></div>
-  <div class="row g-3 mb-3">
-    <div class="col-md-6"><label asp-for="Email" class="form-label">Email</label><input asp-for="Email" class="form-control" /></div>
-    <div class="col-md-6"><label asp-for="Phone" class="form-label">Phone</label><input asp-for="Phone" class="form-control" /></div>
-  </div>
-  <div class="form-check"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label">Active (shown on the kiosk)</label></div>
 
-  <div class="form-section">
-    <div class="form-check mb-3"><input asp-for="CreateLogin" class="form-check-input" /><label asp-for="CreateLogin" class="form-check-label">Host can sign in to the Host Portal <span class="text-muted">(needed for push alerts on their devices)</span></label></div>
-    <label asp-for="Password" class="form-label">Password @(Model.HasLogin ? "(leave blank to keep current)" : "")</label>
-    <input asp-for="Password" class="form-control" autocomplete="new-password" />
-  </div>
-  <div class="form-actions"><button class="btn btn-primary">Save host</button><a class="btn btn-link" asp-action="Index">Cancel</a></div>
-</div></form>
+@{
+    ViewData["Title"] = Model.Id == 0
+        ? "Add Host"
+        : "Edit Host";
+
+    bool isEditing = Model.Id != 0;
+}
+
+<style>
+    /* ==========================================
+       ENTRYHUB - HOST MANAGEMENT FORM
+       ========================================== */
+
+    .eh-host-page {
+        max-width: 900px;
+        margin: 0 auto;
+        padding-bottom: 30px;
+    }
+
+    .eh-host-heading {
+        margin-bottom: 26px;
+    }
+
+    .eh-host-heading h1 {
+        color: #f1f8fb;
+        font-size: 28px;
+        font-weight: 750;
+        margin-bottom: 8px;
+    }
+
+    .eh-host-heading p {
+        color: #9eb9c6;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    .eh-host-card {
+        background: #102b3a;
+        border: 1px solid #294857;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .eh-host-section {
+        padding: 27px 30px;
+        border-bottom: 1px solid #294857;
+    }
+
+    .eh-host-section:last-child {
+        border-bottom: none;
+    }
+
+    .eh-section-title {
+        color: #f0f8fa;
+        font-size: 17px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .eh-section-help {
+        color: #9bb8c5;
+        font-size: 13px;
+        margin-bottom: 24px;
+    }
+
+    .eh-field {
+        margin-bottom: 22px;
+    }
+
+    .eh-field:last-child {
+        margin-bottom: 0;
+    }
+
+    .eh-field-label {
+        display: block;
+        margin-bottom: 9px;
+        color: #dcebf1;
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    .eh-required {
+        color: #4ddbcf;
+    }
+
+    .eh-host-input {
+        width: 100%;
+        min-height: 45px;
+        background: #091f2c;
+        color: #f2f9fb;
+        border: 1px solid #355361;
+        border-radius: 8px;
+        padding: 11px 13px;
+        font-size: 14px;
+        transition: border-color .2s;
+    }
+
+    .eh-host-input::placeholder {
+        color: #7897a5;
+    }
+
+    .eh-host-input:focus {
+        background: #0b2532;
+        color: #fff;
+        border-color: #22c9bb;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(20,184,172,.12);
+    }
+
+    .eh-host-input.input-validation-error {
+        border-color: #f18c8c;
+    }
+
+    .eh-field-hint {
+        display: block;
+        color: #9bb8c5;
+        font-size: 12px;
+        margin-top: 7px;
+    }
+
+    .eh-field-error {
+        display: block;
+        color: #ff9999;
+        font-size: 12px;
+        margin-top: 6px;
+    }
+
+    .eh-validation-summary {
+        color: #ffb5b5;
+        background: #39262d;
+        border: 1px solid #75414b;
+        border-radius: 9px;
+        padding: 12px 15px;
+        margin-bottom: 22px;
+        font-size: 13px;
+    }
+
+    .eh-validation-summary.validation-summary-valid {
+        display: none;
+    }
+
+    .eh-validation-summary ul {
+        margin: 0;
+        padding-left: 18px;
+    }
+
+    .eh-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0,1fr));
+        gap: 20px;
+    }
+
+    .eh-checkbox-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 0;
+    }
+
+    .eh-checkbox-row input {
+        width: 18px;
+        height: 18px;
+        margin-top: 2px;
+        flex-shrink: 0;
+        accent-color: #14b8ac;
+        cursor: pointer;
+    }
+
+    .eh-checkbox-text {
+        color: #e1eef2;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .eh-checkbox-text small {
+        display: block;
+        margin-top: 4px;
+        color: #95b3c0;
+        font-size: 12px;
+    }
+
+    .eh-password-info {
+        background: #0b2532;
+        border: 1px solid #2b4c59;
+        border-radius: 9px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .eh-password-info strong {
+        display: block;
+        color: #cde8eb;
+        font-size: 12px;
+        margin-bottom: 7px;
+    }
+
+    .eh-password-info p {
+        color: #9bb8c5;
+        font-size: 12px;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .eh-form-actions {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        flex-wrap: wrap;
+        padding: 23px 30px;
+        background: #0c2532;
+    }
+
+    .eh-save-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 11px 26px;
+        border: none;
+        border-radius: 8px;
+        color: #062a2c;
+        background: #34d1c4;
+        font-weight: 750;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .eh-save-button:hover {
+        background: #5ae3d7;
+    }
+
+    .eh-cancel-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 11px 20px;
+        border: 1px solid #355361;
+        border-radius: 8px;
+        color: #c3d9e1;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .eh-cancel-button:hover {
+        color: #fff;
+        background: #163747;
+    }
+
+    @@media (max-width: 650px) {
+        .eh-form-grid {
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+
+        .eh-host-section {
+            padding: 22px 18px;
+        }
+
+        .eh-form-actions {
+            padding: 18px;
+        }
+
+        .eh-host-heading h1 {
+            font-size: 24px;
+        }
+    }
+</style>
+
+<div class="eh-host-page">
+
+    <!-- PAGE HEADING -->
+
+    <div class="eh-host-heading">
+        <h1>@ViewData["Title"]</h1>
+        <p>
+            Manage host contact information, kiosk visibility
+            and Host Portal login access.
+        </p>
+    </div>
+
+    <form asp-controller="Hosts"
+          asp-action="@(isEditing ? "Edit" : "Create")"
+          asp-route-id="@(isEditing ? Model.Id : (int?)null)"
+          method="post">
+
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="HasLogin" />
+
+        <div class="eh-host-card">
+
+            <!-- HOST INFORMATION -->
+
+            <section class="eh-host-section">
+
+                <h2 class="eh-section-title">
+                    Host Information
+                </h2>
+
+                <p class="eh-section-help">
+                    Enter the host's correct details.
+                    Visitors will see the host's name on the kiosk.
+                </p>
+
+                <div asp-validation-summary="All"
+                     class="eh-validation-summary"
+                     role="alert">
+                </div>
+
+                <!-- FULL NAME -->
+
+                <div class="eh-field">
+
+                    <label asp-for="Name"
+                           class="eh-field-label">
+                        Full Name
+                        <span class="eh-required">*</span>
+                    </label>
+
+                    <input asp-for="Name"
+                           class="eh-host-input"
+                           placeholder="e.g. John Smith"
+                           autocomplete="name"
+                           maxlength="120"
+                           required />
+
+                    <span asp-validation-for="Name"
+                          class="eh-field-error">
+                    </span>
+
+                    <small class="eh-field-hint">
+                        Use the host's full name.
+                        Minimum 2 characters.
+                    </small>
+
+                </div>
+
+                <!-- EMAIL AND PHONE -->
+
+                <div class="eh-form-grid">
+
+                    <div class="eh-field">
+
+                        <label asp-for="Email"
+                               class="eh-field-label">
+                            Email Address
+                            @if (Model.CreateLogin || Model.HasLogin)
+                            {
+                                <span class="eh-required">*</span>
+                            }
+                        </label>
+
+                        <input asp-for="Email"
+                               type="email"
+                               class="eh-host-input"
+                               placeholder="e.g. john@example.com"
+                               autocomplete="email"
+                               maxlength="254" />
+
+                        <span asp-validation-for="Email"
+                              class="eh-field-error">
+                        </span>
+
+                        <small class="eh-field-hint">
+                            Used for host notifications
+                            and Host Portal login.
+                        </small>
+
+                    </div>
+
+                    <div class="eh-field">
+
+                        <label asp-for="Phone"
+                               class="eh-field-label">
+                            Phone Number
+                        </label>
+
+                        <input asp-for="Phone"
+                               type="tel"
+                               class="eh-host-input"
+                               placeholder="e.g. 0412 345 678"
+                               autocomplete="tel"
+                               inputmode="tel" />
+
+                        <span asp-validation-for="Phone"
+                              class="eh-field-error">
+                        </span>
+
+                        <small class="eh-field-hint">
+                            Australian mobile or landline.
+                            +61 format is also accepted.
+                        </small>
+
+                    </div>
+
+                </div>
+
+                <!-- ACTIVE STATUS -->
+
+                <div class="eh-checkbox-row">
+
+                    <input asp-for="IsActive"
+                           type="checkbox" />
+
+                    <label asp-for="IsActive"
+                           class="eh-checkbox-text">
+                        <strong>Active Host</strong>
+
+                        <small>
+                            Active hosts appear on the kiosk
+                            for visitors to select.
+                        </small>
+                    </label>
+
+                </div>
+
+            </section>
+
+            <!-- LOGIN ACCESS -->
+
+            <section class="eh-host-section">
+
+                <h2 class="eh-section-title">
+                    Host Portal Access
+                </h2>
+
+                <p class="eh-section-help">
+                    Allow this host to sign in and receive
+                    visitor notifications on their devices.
+                </p>
+
+                <div class="eh-checkbox-row">
+
+                    <input asp-for="CreateLogin"
+                           type="checkbox" />
+
+                    <label asp-for="CreateLogin"
+                           class="eh-checkbox-text">
+
+                        <strong>
+                            Enable Host Portal Login
+                        </strong>
+
+                        <small>
+                            Required for host push notifications
+                            and accessing My Notifications.
+                        </small>
+
+                    </label>
+
+                </div>
+
+                <!-- PASSWORD -->
+
+                <div class="eh-field"
+                     style="margin-top:23px">
+
+                    <label asp-for="Password"
+                           class="eh-field-label">
+
+                        @(Model.HasLogin
+                            ? "New Password (Optional)"
+                            : "Login Password")
+
+                    </label>
+
+                    <input asp-for="Password"
+                           type="password"
+                           class="eh-host-input"
+                           placeholder="Enter a secure password"
+                           autocomplete="new-password"
+                           minlength="12"
+                           maxlength="128" />
+
+                    <span asp-validation-for="Password"
+                          class="eh-field-error">
+                    </span>
+
+                    @if (Model.HasLogin)
+                    {
+                        <small class="eh-field-hint">
+                            Leave this field blank to keep
+                            the host's current password.
+                        </small>
+                    }
+                    else
+                    {
+                        <small class="eh-field-hint">
+                            A password is required when
+                            creating a new Host Portal login.
+                        </small>
+                    }
+
+                </div>
+
+                <div class="eh-password-info">
+
+                    <strong>
+                        Password Requirements
+                    </strong>
+
+                    <p>
+                        Use a unique password between 12 and
+                        128 characters. A long passphrase is
+                        recommended. Avoid common or reused
+                        passwords.
+                    </p>
+
+                </div>
+
+            </section>
+
+            <!-- ACTIONS -->
+
+            <div class="eh-form-actions">
+
+                <button type="submit"
+                        class="eh-save-button">
+
+                    @(isEditing
+                        ? "Save Changes"
+                        : "Create Host")
+
+                </button>
+
+                <a asp-controller="Hosts"
+                   asp-action="Index"
+                   class="eh-cancel-button">
+
+                    Cancel
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </form>
+
+</div>
