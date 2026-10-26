@@ -1,4 +1,6 @@
 
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using VisitorCheckIn.Models;
 
@@ -21,7 +23,6 @@ public class LoginVm
 
     public bool Remember { get; set; }
 }
-
 
 // ============================================
 // HOST MANAGEMENT
@@ -49,7 +50,7 @@ public class HostFormVm
     public string? Email { get; set; }
 
     [RegularExpression(
-        @"^(?:(?:\+61|0)[ -]?4(?:[ -]?\d){8}|(?:\+61|0)[ -]?[2378](?:[ -]?\d){8})$",
+        @"^(?:\+61|0)[\s-]?(?:4(?:[\s-]?\d){8}|[2378](?:[\s-]?\d){8})$",
         ErrorMessage = "Enter a valid Australian mobile or landline number.")]
     public string? Phone { get; set; }
 
@@ -66,9 +67,14 @@ public class HostFormVm
         ErrorMessage = "Password cannot exceed 128 characters.")]
     public string? Password { get; set; }
 
+    [DataType(DataType.Password)]
+    [Compare(
+        nameof(Password),
+        ErrorMessage = "Passwords do not match.")]
+    public string? ConfirmPassword { get; set; }
+
     public bool HasLogin { get; set; }
 }
-
 
 // ============================================
 // DASHBOARD
@@ -89,7 +95,6 @@ public class DashboardVm
     public List<Visit> OnSite { get; set; } = new();
 }
 
-
 // ============================================
 // KIOSK DEVICES
 // ============================================
@@ -100,7 +105,6 @@ public class DevicesIndexVm
 
     public List<EnrollmentToken> Pending { get; set; } = new();
 }
-
 
 // ============================================
 // KIOSK ENROLLMENT RESULT
@@ -125,7 +129,6 @@ public class EnrollmentResultVm
     public bool IsLocalhost { get; set; }
 }
 
-
 // ============================================
 // KIOSK ENROLLMENT
 // ============================================
@@ -142,7 +145,6 @@ public class EnrollVm
         ErrorMessage = "Device name must be between 2 and 100 characters.")]
     public string DeviceName { get; set; } = "";
 }
-
 
 // ============================================
 // KIOSK QUESTIONS
@@ -163,7 +165,6 @@ public class KioskQuestion
     public string VisitorType { get; set; } = "";
 }
 
-
 // ============================================
 // KIOSK HOST
 // ============================================
@@ -174,7 +175,6 @@ public class KioskHost
 
     public string Name { get; set; } = "";
 }
-
 
 // ============================================
 // MAIN KIOSK
@@ -197,7 +197,6 @@ public class KioskVm
     public List<KioskHost> Hosts { get; set; } = new();
 }
 
-
 // ============================================
 // VISITOR QUESTION ANSWERS
 // ============================================
@@ -209,12 +208,9 @@ public class AnswerDto
     public string Value { get; set; } = "";
 }
 
-
 // ============================================
 // VISITOR CHECK-IN
 // ============================================
-
-
 
 public class CheckInDto
 {
@@ -243,17 +239,12 @@ public class CheckInDto
 
     public List<AnswerDto> Answers { get; set; } = new();
 
-    // Allows a different visitor with the same name
-    // to continue after the duplicate warning.
+    // Duplicate-name confirmation.
     public bool ConfirmDuplicate { get; set; } = false;
 
-    // Unique identifier for each check-in submission.
-    // Used to prevent accidental duplicate records.
+    // Duplicate-submission protection.
     public Guid SubmissionId { get; set; }
 }
-
-
-
 
 // ============================================
 // GENERIC ID
@@ -263,7 +254,6 @@ public class IdDto
 {
     public int Id { get; set; }
 }
-
 
 // ============================================
 // HOST PUSH NOTIFICATIONS

@@ -543,3 +543,128 @@
     </form>
 
 </div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        const name = document.getElementById('Name');
+        const email = document.getElementById('Email');
+        const phone = document.getElementById('Phone');
+        const password = document.getElementById('Password');
+        const createLogin = document.getElementById('CreateLogin');
+        const hasLogin = document.getElementById('HasLogin');
+
+        const existingLogin =
+            hasLogin?.value.toLowerCase() === 'true';
+
+        // Australian mobile and landline numbers
+        const phonePattern =
+            /^(?:\+61|0)[\s-]?(?:4(?:[\s-]?\d){8}|[2378](?:[\s-]?\d){8})$/;
+
+        // International names
+        const namePattern =
+            /^[\p{L}\p{M}]+(?:[ '\u2019.-][\p{L}\p{M}]+)*$/u;
+
+        function validateField(field) {
+
+            if (!field) return true;
+
+            const value = field.value.trim();
+            let error = '';
+
+            if (field === name) {
+                if (value.length < 2 || value.length > 120) {
+                    error = 'Name must be between 2 and 120 characters.';
+                } else if (!namePattern.test(value)) {
+                    error = 'Enter a valid name using letters.';
+                }
+            }
+
+            if (field === email) {
+                if ((createLogin.checked || existingLogin) && !value) {
+                    error = 'Email is required for Host Portal login.';
+                } else if (value && !field.checkValidity()) {
+                    error = 'Enter a valid email address.';
+                }
+            }
+
+            if (field === phone && value) {
+                if (!phonePattern.test(value)) {
+                    error =
+                        'Enter a valid Australian mobile or landline number.';
+                }
+            }
+
+            if (field === password && value) {
+                if (value.length < 12 || value.length > 128) {
+                    error = 'Password must be between 12 and 128 characters.';
+                }
+            }
+
+            const errorSpan = document.querySelector(
+                '[data-valmsg-for="' + field.name + '"]'
+            );
+
+            if (errorSpan) {
+                errorSpan.textContent = error;
+                errorSpan.classList.toggle(
+                    'field-validation-error',
+                    !!error
+                );
+                errorSpan.classList.toggle(
+                    'field-validation-valid',
+                    !error
+                );
+            }
+
+            field.classList.toggle(
+                'input-validation-error',
+                !!error
+            );
+
+            field.setAttribute(
+                'aria-invalid',
+                error ? 'true' : 'false'
+            );
+
+            return !error;
+        }
+
+        // Validate when user moves to the next field.
+        [name, email, phone, password].forEach(function(field) {
+            if (!field) return;
+
+            field.addEventListener('blur', function() {
+                validateField(field);
+            });
+
+            // Update errors while correcting input.
+            field.addEventListener('input', function() {
+                if (field.classList.contains('input-validation-error')) {
+                    validateField(field);
+                }
+            });
+        });
+
+        function updateEmailRequirement() {
+            email.required = createLogin.checked || existingLogin;
+
+            // Revalidate if email was previously touched.
+            if (email.classList.contains('input-validation-error')) {
+                validateField(email);
+            }
+        }
+
+        if (createLogin && email) {
+            createLogin.addEventListener(
+                'change',
+                updateEmailRequirement
+            );
+
+            updateEmailRequirement();
+        }
+
+    });
+</script>
+
